@@ -9,9 +9,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Options
 option(NFX_ENABLE_SIMD "Enable SIMD optimizations (AVX2)" ON)
 option(NFX_ENABLE_IO_URING "Enable io_uring transport (Linux only)" OFF)
+option(NFX_ENABLE_LOGGING "Enable Quill high-performance logging" ON)
 option(NFX_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(NFX_BUILD_TESTS "Build tests" ON)
 option(NFX_BUILD_EXAMPLES "Build examples" ON)
+
+# Dependencies via FetchContent
+include(FetchContent)
+
+# Quill - High-performance logging library (~20ns hot path)
+if(NFX_ENABLE_LOGGING)
+    FetchContent_Declare(
+        quill
+        GIT_REPOSITORY https://github.com/odygrd/quill.git
+        GIT_TAG v7.3.0
+        GIT_SHALLOW TRUE
+    )
+    set(QUILL_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(quill)
+endif()
 
 # Compiler flags
 add_compile_options(
@@ -67,6 +83,12 @@ target_compile_features(nexusfix INTERFACE cxx_std_23)
 if(NFX_ENABLE_SIMD)
     target_compile_options(nexusfix INTERFACE -mavx2)
     target_compile_definitions(nexusfix INTERFACE NFX_HAS_SIMD=1)
+endif()
+
+# Quill logging support
+if(NFX_ENABLE_LOGGING)
+    target_link_libraries(nexusfix INTERFACE quill::quill)
+    target_compile_definitions(nexusfix INTERFACE NFX_HAS_LOGGING=1)
 endif()
 
 # io_uring support (Linux only)
