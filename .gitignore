@@ -62,3 +62,6 @@ credentials.*
 secrets.*
 .env
 .env.*
+
+# Internal documents (compliance, audits, notes)
+.internal/
