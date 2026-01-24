@@ -1,0 +1,80 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Compiled objects
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.lib
+*.exe
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Third-party source (use system packages)
+quickfix/
+
+# Duplicate/old directories
+benchmark/
+test/
+
+# Output files (benchmark outputs, etc.)
+# Keep CMakeLists.txt
+!CMakeLists.txt
+
+# Benchmark output files (keep markdown reports)
+docs/compare/*.txt
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Duplicate files
+*copy.md
+*copy*.md
+
+# Redundant investigation reports (findings captured in TICKET_008)
+GEMINI.md
+docs/compare/NEXUSFIX_INVESTIGATION_REPORT.md
+
+# Credential files
+*.pem
+*.key
+credentials.*
+secrets.*
+.env
+.env.*
+
+# Internal documents (compliance, audits, notes)
+.internal/
+
+# Project instructions (keep in private NexusFixRecord repo)
+CLAUDE.md
+
+# Design tickets (keep in private NexusFixRecord repo)
+**/TICKET_*.md
+
+# Chinese docs (keep in private repo)
+*_CN.md
+GEMINI.md
+
+# Private records repository (local copy)
+NexusFixRecord/
