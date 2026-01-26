@@ -17,6 +17,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <algorithm>
+#include <memory_resource>
 
 // Use Abseil flat_hash_map for ~3x faster lookups (Swiss Tables with SIMD probing)
 #if defined(NFX_HAS_ABSEIL) && NFX_HAS_ABSEIL
@@ -54,13 +55,26 @@ public:
         size_t max_messages = 10000;      // Maximum messages to retain
         size_t max_bytes = 100'000'000;   // 100MB max
         bool evict_oldest = true;         // Evict oldest when full
+        size_t pool_size_bytes = 64 * 1024 * 1024;  // 64MB PMR pool
+    };
+
+    /// PMR pool metrics for monitoring
+    struct PoolMetrics {
+        size_t pool_capacity{0};          // Total pool size in bytes
+        size_t bytes_allocated{0};        // Current bytes allocated from pool
+        size_t peak_usage{0};             // High water mark
+        size_t reset_count{0};            // Number of pool resets
     };
 
     explicit MemoryMessageStore(Config config)
-        : config_(std::move(config)) {}
+        : config_(std::move(config))
+        , pool_storage_(config_.pool_size_bytes)
+        , pool_(pool_storage_.data(), pool_storage_.size(),
+                std::pmr::null_memory_resource())
+        , pool_metrics_{.pool_capacity = config_.pool_size_bytes} {}
 
     explicit MemoryMessageStore(std::string_view session_id)
-        : config_{.session_id = std::string(session_id)} {}
+        : MemoryMessageStore(Config{.session_id = std::string(session_id)}) {}
 
     // ========================================================================
     // Message Storage
@@ -81,16 +95,33 @@ public:
             }
         }
 
+        // Allocate message buffer from PMR pool (O(1), no syscall)
+        std::pmr::polymorphic_allocator<char> alloc(&pool_);
+        PmrVector pmr_msg(alloc);
+        try {
+            pmr_msg.assign(msg.begin(), msg.end());
+        } catch (const std::bad_alloc&) {
+            // Pool exhausted
+            ++stats_.store_failures;
+            return false;
+        }
+
         // Store the message
         auto [it, inserted] = messages_.try_emplace(
             seq_num,
-            std::vector<char>(msg.begin(), msg.end())
+            std::move(pmr_msg)
         );
 
         if (inserted) {
             total_bytes_ += msg.size();
             ++stats_.messages_stored;
             stats_.bytes_stored += msg.size();
+
+            // Update pool metrics
+            pool_metrics_.bytes_allocated += msg.size();
+            if (pool_metrics_.bytes_allocated > pool_metrics_.peak_usage) {
+                pool_metrics_.peak_usage = pool_metrics_.bytes_allocated;
+            }
 
             // Track min/max sequence for efficient range queries
             if (seq_num < min_seq_) min_seq_ = seq_num;
@@ -107,7 +138,8 @@ public:
         auto it = messages_.find(seq_num);
         if (it != messages_.end()) {
             ++stats_.messages_retrieved;
-            return it->second;
+            // Copy from PMR storage to regular vector for return
+            return std::vector<char>(it->second.begin(), it->second.end());
         }
         return std::nullopt;
     }
@@ -124,7 +156,8 @@ public:
         for (uint32_t seq = begin_seq; seq <= actual_end; ++seq) {
             auto it = messages_.find(seq);
             if (it != messages_.end()) {
-                result.push_back(it->second);
+                // Copy from PMR storage to regular vector
+                result.emplace_back(it->second.begin(), it->second.end());
                 ++stats_.messages_retrieved;
             }
         }
@@ -159,6 +192,12 @@ public:
     void reset() noexcept override {
         std::unique_lock lock(mutex_);
         messages_.clear();
+
+        // Release PMR pool - O(1) memory reclamation
+        pool_.release();
+        ++pool_metrics_.reset_count;
+        pool_metrics_.bytes_allocated = 0;
+
         total_bytes_ = 0;
         min_seq_ = UINT32_MAX;
         max_seq_ = 0;
@@ -177,6 +216,12 @@ public:
 
     [[nodiscard]] Stats stats() const noexcept override {
         return stats_;
+    }
+
+    /// Get PMR pool metrics for monitoring
+    [[nodiscard]] PoolMetrics pool_metrics() const noexcept {
+        std::shared_lock lock(mutex_);
+        return pool_metrics_;
     }
 
     // ========================================================================
@@ -202,13 +247,19 @@ public:
     }
 
 private:
+    /// PMR-allocated vector type for message storage
+    using PmrVector = std::pmr::vector<char>;
+
     void evict_oldest_locked() noexcept {
         // Find and remove the oldest message (smallest sequence number)
         if (messages_.empty()) return;
 
         auto it = messages_.find(min_seq_);
         if (it != messages_.end()) {
-            total_bytes_ -= it->second.size();
+            size_t msg_size = it->second.size();
+            total_bytes_ -= msg_size;
+            // Note: PMR monotonic buffer doesn't reclaim on erase,
+            // memory is reclaimed on pool reset()
             messages_.erase(it);
 
             // Update min_seq_
@@ -225,7 +276,12 @@ private:
     }
 
     Config config_;
-    HashMap<uint32_t, std::vector<char>> messages_;  // Swiss Tables when Abseil available
+
+    // PMR pool for zero-syscall message allocation
+    std::vector<char> pool_storage_;              // Backing storage
+    std::pmr::monotonic_buffer_resource pool_;    // PMR resource
+
+    HashMap<uint32_t, PmrVector> messages_;       // Swiss Tables when Abseil available
     size_t total_bytes_{0};
     uint32_t min_seq_{UINT32_MAX};
     uint32_t max_seq_{0};
@@ -235,6 +291,7 @@ private:
 
     mutable std::shared_mutex mutex_;
     mutable Stats stats_;
+    mutable PoolMetrics pool_metrics_;
 };
 
 } // namespace nfx::store
