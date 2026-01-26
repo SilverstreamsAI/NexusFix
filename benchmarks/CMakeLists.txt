@@ -82,6 +82,14 @@ set_target_properties(thread_local_pool_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# Message store PMR benchmark (before vs after PMR optimization)
+add_executable(message_store_pmr_bench message_store_pmr_bench.cpp)
+target_link_libraries(message_store_pmr_bench PRIVATE nexusfix pthread)
+target_compile_options(message_store_pmr_bench PRIVATE -O3 -march=native)
+set_target_properties(message_store_pmr_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # Compile-time serializer benchmark
 add_executable(constexpr_serializer_bench constexpr_serializer_bench.cpp)
 target_link_libraries(constexpr_serializer_bench PRIVATE nexusfix pthread)
