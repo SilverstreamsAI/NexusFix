@@ -607,6 +607,21 @@ We welcome discussion and questions:
 
 ---
 
+## Acknowledgments
+
+This work stands on the shoulders of C++11-era engineers whose optimization patterns became the foundation for language evolution:
+
+- **Fix8 contributors** - Proved object pools and zero-copy parsing work at scale
+- **QuickFIX team** - Established FIX engine architecture patterns used industry-wide
+- **Boost.Asio authors** - Pioneered async I/O patterns (now proposed as std::net)
+- **LMAX Disruptor team** - Demonstrated lock-free queues and cache-line padding
+
+Their 1,000-line hand-crafted optimizations became C++23's 10-line standard idioms. The engineering effort was never wasted - it became the blueprint for the next standard.
+
+> *"If I have seen further, it is by standing on the shoulders of giants."* - Isaac Newton
+
+---
+
 ## References
 
 - [NexusFIX Optimization Diary](optimization_diary.md) - Detailed optimization journey
