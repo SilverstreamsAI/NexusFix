@@ -44,46 +44,86 @@ if(NFX_ENABLE_ABSEIL)
     FetchContent_MakeAvailable(abseil-cpp)
 endif()
 
-# Compiler flags
-add_compile_options(
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Werror
-    -Wno-unused-parameter
-)
-
-# Release optimizations with full LTO support
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    # Compiler optimization flags
+# Platform-specific compiler flags
+if(MSVC)
+    # MSVC flags
     add_compile_options(
-        -O3                      # Maximum optimization
-        -march=native            # CPU-specific optimizations
-        -flto=auto               # Link-Time Optimization (auto-detect parallelism)
-        -fno-fat-lto-objects     # Smaller LTO object files
-        -fdevirtualize-at-ltrans # Better devirtualization at link time
-        -fipa-pta                # Interprocedural pointer analysis
+        /W4                      # High warning level
+        /WX                      # Warnings as errors
+        /permissive-             # Strict conformance
+        /Zc:__cplusplus          # Correct __cplusplus macro
+        /utf-8                   # UTF-8 source and execution charset
     )
 
-    # Linker flags for LTO
-    add_link_options(
-        -flto=auto
-        -fuse-linker-plugin
-    )
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_compile_options(
+            /O2                  # Maximum optimization
+            /GL                  # Whole program optimization
+        )
+        add_link_options(/LTCG)  # Link-time code generation
+    endif()
+else()
+    # Clang on Linux: use libc++ for full C++23 support (std::expected, etc.)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_compile_options(-stdlib=libc++)
+        add_link_options(-stdlib=libc++ -lc++abi)
+    endif()
 
-    # Set interprocedural optimization policy
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-endif()
-
-# RelWithDebInfo optimizations (for profiling)
-if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    # GCC/Clang flags
     add_compile_options(
-        -O2
-        -march=native
-        -flto=auto
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Werror
+        -Wno-unused-parameter
     )
-    add_link_options(-flto=auto)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+    # Release optimizations with full LTO support
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        add_compile_options(
+            -O3                      # Maximum optimization
+        )
+
+        # Native arch only for local builds, not CI
+        if(NOT DEFINED ENV{CI})
+            add_compile_options(-march=native)
+        endif()
+
+        # LTO support (GCC/Clang)
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            add_compile_options(
+                -flto=auto
+                -fno-fat-lto-objects
+                -fdevirtualize-at-ltrans
+                -fipa-pta
+            )
+            add_link_options(
+                -flto=auto
+                -fuse-linker-plugin
+            )
+        elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            add_compile_options(-flto=thin)
+            add_link_options(-flto=thin)
+        endif()
+
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+
+    # RelWithDebInfo optimizations (for profiling)
+    if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+        add_compile_options(-O2)
+        if(NOT DEFINED ENV{CI})
+            add_compile_options(-march=native)
+        endif()
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            add_compile_options(-flto=auto)
+            add_link_options(-flto=auto)
+        elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            add_compile_options(-flto=thin)
+            add_link_options(-flto=thin)
+        endif()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
 endif()
 
 # Main header-only library (for now)
@@ -94,14 +134,27 @@ target_include_directories(nexusfix INTERFACE
 )
 target_compile_features(nexusfix INTERFACE cxx_std_23)
 
+# Windows socket library
+if(WIN32)
+    target_link_libraries(nexusfix INTERFACE ws2_32)
+endif()
+
 # SIMD support
 if(NFX_ENABLE_SIMD)
-    target_compile_options(nexusfix INTERFACE -mavx2)
+    if(MSVC)
+        target_compile_options(nexusfix INTERFACE /arch:AVX2)
+    else()
+        target_compile_options(nexusfix INTERFACE -mavx2)
+    endif()
     target_compile_definitions(nexusfix INTERFACE NFX_HAS_SIMD=1)
 
     # AVX-512 support (optional, requires CPU support)
     if(NFX_ENABLE_AVX512)
-        target_compile_options(nexusfix INTERFACE -mavx512f -mavx512bw)
+        if(MSVC)
+            target_compile_options(nexusfix INTERFACE /arch:AVX512)
+        else()
+            target_compile_options(nexusfix INTERFACE -mavx512f -mavx512bw)
+        endif()
         message(STATUS "AVX-512 optimizations enabled")
     endif()
 endif()
@@ -136,11 +189,18 @@ endif()
 if(NFX_BUILD_TESTS)
     enable_testing()
     find_package(Catch2 3 QUIET)
-    if(Catch2_FOUND)
-        add_subdirectory(tests)
-    else()
-        message(STATUS "Catch2 not found, skipping tests")
+    if(NOT Catch2_FOUND)
+        message(STATUS "Catch2 not found, fetching via FetchContent...")
+        FetchContent_Declare(
+            Catch2
+            GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+            GIT_TAG v3.5.2
+            GIT_SHALLOW TRUE
+        )
+        FetchContent_MakeAvailable(Catch2)
+        list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
     endif()
+    add_subdirectory(tests)
 endif()
 
 # Benchmarks

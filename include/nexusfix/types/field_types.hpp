@@ -7,6 +7,8 @@
 #include <charconv>
 #include <limits>
 
+#include "nexusfix/platform/platform.hpp"
+
 namespace nfx {
 
 // ============================================================================
@@ -90,7 +92,7 @@ struct FixedPrice {
     constexpr auto operator<=>(const FixedPrice&) const noexcept = default;
 
     /// Parse from string view (zero-copy)
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     static constexpr FixedPrice from_string(std::string_view sv) noexcept {
         if (sv.empty()) [[unlikely]] return FixedPrice{0};
 
@@ -177,7 +179,7 @@ struct Qty {
 
     constexpr auto operator<=>(const Qty&) const noexcept = default;
 
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     static constexpr Qty from_string(std::string_view sv) noexcept {
         if (sv.empty()) [[unlikely]] return Qty{0};
 

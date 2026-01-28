@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <vector>
 #include <cstdlib>
+#include <cstring>
 
 namespace nfx {
 
@@ -349,7 +350,7 @@ public:
 private:
     void cleanup() noexcept {
         if (ctx_ && initialized_) {
-            ctx_->unregister_buffers();
+            (void)ctx_->unregister_buffers();
         }
         if (memory_) {
             free(memory_);
@@ -1102,20 +1103,24 @@ public:
         return static_cast<size_t>(recv_result);
     }
 
-    void set_nodelay(bool enable) override {
+    bool set_nodelay(bool enable) override {
         socket_.set_nodelay(enable);
+        return true;
     }
 
-    void set_keepalive(bool enable) override {
+    bool set_keepalive(bool enable) override {
         socket_.set_keepalive(enable);
+        return true;
     }
 
-    void set_receive_timeout(int /*milliseconds*/) override {
+    bool set_receive_timeout(int /*milliseconds*/) override {
         // io_uring uses async operations, timeout handled differently
+        return true;
     }
 
-    void set_send_timeout(int /*milliseconds*/) override {
+    bool set_send_timeout(int /*milliseconds*/) override {
         // io_uring uses async operations, timeout handled differently
+        return true;
     }
 
     /// Process pending completions (non-blocking)
@@ -1167,14 +1172,14 @@ private:
                     }
                 }
                 // Replenish buffer for reuse
-                multishot_buffers_.replenish(buf_id);
+                (void)multishot_buffers_.replenish(buf_id);
             }
 
             // Check if multishot is still active
             if (!ProvidedBufferGroup::has_more(cqe->flags)) {
                 // Multishot terminated - restart if still connected
                 if (socket_.is_connected()) {
-                    socket_.submit_recv_multishot(multishot_buffers_.group_id(), this);
+                    (void)socket_.submit_recv_multishot(multishot_buffers_.group_id(), this);
                     ctx_.submit();
                 }
             }
@@ -1200,7 +1205,7 @@ private:
             recv_buf_idx_ = registered_pool_.acquire();
             if (recv_buf_idx_ >= 0) {
                 size_t len = std::min(span.size(), registered_pool_.buffer_size());
-                socket_.submit_read_fixed(static_cast<uint16_t>(recv_buf_idx_), len);
+                (void)socket_.submit_read_fixed(static_cast<uint16_t>(recv_buf_idx_), len);
                 ctx_.submit();
                 recv_pending_ = true;
                 return;
@@ -1208,7 +1213,7 @@ private:
         }
 
         // Fallback to regular receive
-        socket_.submit_read(span);
+        (void)socket_.submit_read(span);
         ctx_.submit();
         recv_pending_ = true;
     }

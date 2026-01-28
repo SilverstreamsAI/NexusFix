@@ -23,6 +23,8 @@
 #include <span>
 #include <type_traits>
 
+#include "nexusfix/platform/platform.hpp"
+
 namespace nfx::serializer {
 
 // ============================================================================
@@ -117,7 +119,7 @@ struct FastIntSerializer {
 
     /// Serialize integer to fixed-width buffer
     /// Returns actual number of digits written
-    [[gnu::hot]]
+    NFX_HOT
     static size_t serialize(char* buf, uint32_t value) noexcept {
         // Count digits
         size_t digits = 1;
@@ -170,7 +172,7 @@ public:
 
     /// Write a field with string value
     template<int Tag>
-    [[gnu::hot]]
+    NFX_HOT
     FastMessageBuilder& field(std::string_view value) noexcept {
         constexpr TagString<Tag> tag_str{};
         write_raw(tag_str.c_str(), tag_str.size());
@@ -181,7 +183,7 @@ public:
 
     /// Write a field with integer value
     template<int Tag>
-    [[gnu::hot]]
+    NFX_HOT
     FastMessageBuilder& field(uint32_t value) noexcept {
         constexpr TagString<Tag> tag_str{};
         write_raw(tag_str.c_str(), tag_str.size());
@@ -196,7 +198,7 @@ public:
 
     /// Write a field with char value
     template<int Tag>
-    [[gnu::hot]]
+    NFX_HOT
     FastMessageBuilder& field(char value) noexcept {
         constexpr TagString<Tag> tag_str{};
         write_raw(tag_str.c_str(), tag_str.size());
@@ -207,7 +209,7 @@ public:
 
     /// Write a field with bool value (Y/N)
     template<int Tag>
-    [[gnu::hot]]
+    NFX_HOT
     FastMessageBuilder& field(bool value) noexcept {
         return field<Tag>(value ? 'Y' : 'N');
     }

@@ -1,8 +1,16 @@
 #pragma once
 
+// Suppress MSVC warning C4324: structure was padded due to alignment specifier
+// This is expected behavior for cache-line aligned structures
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4324)
+#endif
+
 #include <span>
 #include <cstdint>
 
+#include "nexusfix/platform/platform.hpp"
 #include "nexusfix/types/tag.hpp"
 #include "nexusfix/types/error.hpp"
 #include "nexusfix/interfaces/i_message.hpp"
@@ -29,7 +37,7 @@ public:
         : raw_{}, header_{}, field_count_{0} {}
 
     /// Parse from buffer (zero-copy)
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     static ParseResult<ParsedMessage> parse(
         std::span<const char> data) noexcept
     {
@@ -288,7 +296,7 @@ public:
     static constexpr size_t MAX_TAG = 512;
 
     /// Parse and index all fields for O(1) lookup
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     static ParseResult<IndexedParser> parse(
         std::span<const char> data) noexcept
     {
@@ -328,24 +336,24 @@ public:
     // ========================================================================
 
     /// Get field by tag (O(1) lookup)
-    [[nodiscard]] [[gnu::hot]] FieldView get_field(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT FieldView get_field(int tag) const noexcept {
         return field_table_.get(tag);
     }
 
     /// Check if field exists (O(1))
-    [[nodiscard]] [[gnu::hot]] bool has_field(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT bool has_field(int tag) const noexcept {
         return field_table_.has(tag);
     }
 
-    [[nodiscard]] [[gnu::hot]] std::string_view get_string(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT std::string_view get_string(int tag) const noexcept {
         return field_table_.get_string(tag);
     }
 
-    [[nodiscard]] [[gnu::hot]] std::optional<int64_t> get_int(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT std::optional<int64_t> get_int(int tag) const noexcept {
         return field_table_.get_int(tag);
     }
 
-    [[nodiscard]] [[gnu::hot]] char get_char(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT char get_char(int tag) const noexcept {
         return field_table_.get_char(tag);
     }
 
@@ -428,7 +436,7 @@ private:
 // ============================================================================
 
 /// Parse FIX message from buffer
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline ParseResult<ParsedMessage> parse_message(
     std::span<const char> data) noexcept
 {
@@ -436,7 +444,7 @@ inline ParseResult<ParsedMessage> parse_message(
 }
 
 /// Parse with O(1) field lookup
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline ParseResult<IndexedParser> parse_indexed(
     std::span<const char> data) noexcept
 {
@@ -455,3 +463,7 @@ static_assert(alignof(IndexedParser) >= PARSER_CACHE_LINE_SIZE,
     "IndexedParser must be cache-line aligned for optimal memory access");
 
 } // namespace nfx
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

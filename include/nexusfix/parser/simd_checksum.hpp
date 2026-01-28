@@ -19,6 +19,8 @@
 #include <string_view>
 #include <span>
 
+#include "nexusfix/platform/platform.hpp"
+
 // SIMD headers
 #if defined(__AVX512F__) && defined(__AVX512BW__)
     #include <immintrin.h>
@@ -38,7 +40,7 @@ namespace nfx::parser {
 // ============================================================================
 
 /// Scalar checksum calculation - baseline for comparison
-[[nodiscard]] [[gnu::noinline]]
+[[nodiscard]] NFX_NO_INLINE
 inline uint8_t checksum_scalar(const char* data, size_t len) noexcept {
     uint32_t sum = 0;
     for (size_t i = 0; i < len; ++i) {
@@ -54,7 +56,7 @@ inline uint8_t checksum_scalar(const char* data, size_t len) noexcept {
 #if defined(NFX_SSE2_CHECKSUM) || defined(NFX_AVX2_CHECKSUM) || defined(NFX_AVX512_CHECKSUM)
 
 /// SSE2 checksum - processes 16 bytes at a time
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline uint8_t checksum_sse2(const char* data, size_t len) noexcept {
     const uint8_t* ptr = reinterpret_cast<const uint8_t*>(data);
 
@@ -94,7 +96,7 @@ inline uint8_t checksum_sse2(const char* data, size_t len) noexcept {
 #if defined(NFX_AVX2_CHECKSUM) || defined(NFX_AVX512_CHECKSUM)
 
 /// AVX2 checksum - processes 32 bytes at a time
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline uint8_t checksum_avx2(const char* data, size_t len) noexcept {
     const uint8_t* ptr = reinterpret_cast<const uint8_t*>(data);
 
@@ -139,7 +141,7 @@ inline uint8_t checksum_avx2(const char* data, size_t len) noexcept {
 #if defined(NFX_AVX512_CHECKSUM)
 
 /// AVX-512 checksum - processes 64 bytes at a time
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline uint8_t checksum_avx512(const char* data, size_t len) noexcept {
     const uint8_t* ptr = reinterpret_cast<const uint8_t*>(data);
 
@@ -175,7 +177,7 @@ inline uint8_t checksum_avx512(const char* data, size_t len) noexcept {
 // ============================================================================
 
 /// Automatically select best checksum implementation
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline uint8_t checksum(const char* data, size_t len) noexcept {
 #if defined(NFX_AVX512_CHECKSUM)
     return checksum_avx512(data, len);
@@ -189,13 +191,13 @@ inline uint8_t checksum(const char* data, size_t len) noexcept {
 }
 
 /// Checksum for string_view
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline uint8_t checksum(std::string_view data) noexcept {
     return checksum(data.data(), data.size());
 }
 
 /// Checksum for span
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline uint8_t checksum(std::span<const char> data) noexcept {
     return checksum(data.data(), data.size());
 }

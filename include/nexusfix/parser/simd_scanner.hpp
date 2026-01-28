@@ -1,10 +1,18 @@
 #pragma once
 
+// Suppress MSVC warning C4324: structure was padded due to alignment specifier
+// This is expected behavior for cache-line aligned structures
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4324)
+#endif
+
 #include <span>
 #include <cstdint>
 #include <cstddef>
 #include <array>
 
+#include "nexusfix/platform/platform.hpp"
 #include "nexusfix/interfaces/i_message.hpp"
 #include "nexusfix/memory/buffer_pool.hpp"  // For nfx::CACHE_LINE_SIZE
 
@@ -70,7 +78,7 @@ struct alignas(CACHE_LINE_SIZE) SohPositions {
 // ============================================================================
 
 /// Scalar SOH scanner for non-SIMD platforms or small buffers
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline SohPositions scan_soh_scalar(std::span<const char> data) noexcept {
     SohPositions result;
 
@@ -84,7 +92,7 @@ inline SohPositions scan_soh_scalar(std::span<const char> data) noexcept {
 }
 
 /// Find next SOH position starting from offset (scalar)
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t find_soh_scalar(
     std::span<const char> data,
     size_t start = 0) noexcept
@@ -98,7 +106,7 @@ inline size_t find_soh_scalar(
 }
 
 /// Find '=' position starting from offset (scalar)
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t find_equals_scalar(
     std::span<const char> data,
     size_t start = 0) noexcept
@@ -118,7 +126,7 @@ inline size_t find_equals_scalar(
 #if NFX_SIMD_AVAILABLE
 
 /// AVX2-accelerated SOH scanner (processes 32 bytes at a time)
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline SohPositions scan_soh_avx2(std::span<const char> data) noexcept {
     SohPositions result;
 
@@ -157,7 +165,7 @@ inline SohPositions scan_soh_avx2(std::span<const char> data) noexcept {
 }
 
 /// AVX2-accelerated find next SOH
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t find_soh_avx2(
     std::span<const char> data,
     size_t start = 0) noexcept
@@ -198,7 +206,7 @@ inline size_t find_soh_avx2(
 }
 
 /// AVX2-accelerated find '='
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t find_equals_avx2(
     std::span<const char> data,
     size_t start = 0) noexcept
@@ -239,7 +247,7 @@ inline size_t find_equals_avx2(
 }
 
 /// Count SOH occurrences using AVX2 (for message boundary detection)
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t count_soh_avx2(std::span<const char> data) noexcept {
     const __m256i soh_vec = _mm256_set1_epi8(fix::SOH);
     const size_t simd_end = data.size() & ~(AVX2_REGISTER_SIZE - 1);
@@ -273,7 +281,7 @@ inline size_t count_soh_avx2(std::span<const char> data) noexcept {
 
 /// AVX-512 accelerated SOH scanner (processes 64 bytes at a time)
 /// Provides ~2x throughput improvement over AVX2 for large buffers
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline SohPositions scan_soh_avx512(std::span<const char> data) noexcept {
     SohPositions result;
 
@@ -309,7 +317,7 @@ inline SohPositions scan_soh_avx512(std::span<const char> data) noexcept {
 }
 
 /// AVX-512 accelerated find next SOH
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t find_soh_avx512(
     std::span<const char> data,
     size_t start = 0) noexcept
@@ -349,7 +357,7 @@ inline size_t find_soh_avx512(
 }
 
 /// AVX-512 accelerated find '='
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t find_equals_avx512(
     std::span<const char> data,
     size_t start = 0) noexcept
@@ -389,7 +397,7 @@ inline size_t find_equals_avx512(
 }
 
 /// Count SOH occurrences using AVX-512
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t count_soh_avx512(std::span<const char> data) noexcept {
     const __m512i soh_vec = _mm512_set1_epi8(fix::SOH);
     const size_t simd_end = data.size() & ~(AVX512_REGISTER_SIZE - 1);
@@ -420,7 +428,7 @@ inline size_t count_soh_avx512(std::span<const char> data) noexcept {
 
 /// Scan for all SOH positions (auto-selects best implementation)
 /// Priority: AVX-512 > AVX2 > Scalar
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline SohPositions scan_soh(std::span<const char> data) noexcept {
 #if NFX_AVX512_AVAILABLE
     // Use AVX-512 for buffers >= 128 bytes (2x register size)
@@ -439,12 +447,12 @@ inline SohPositions scan_soh(std::span<const char> data) noexcept {
 
 /// Find next SOH position (auto-selects best implementation)
 /// Priority: AVX-512 > AVX2 > Scalar
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t find_soh(
     std::span<const char> data,
     size_t start = 0) noexcept
 {
-    const size_t remaining = data.size() - start;
+    [[maybe_unused]] const size_t remaining = data.size() - start;
 #if NFX_AVX512_AVAILABLE
     if (remaining >= 128) [[likely]] {
         return find_soh_avx512(data, start);
@@ -460,12 +468,12 @@ inline size_t find_soh(
 
 /// Find '=' position (auto-selects best implementation)
 /// Priority: AVX-512 > AVX2 > Scalar
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t find_equals(
     std::span<const char> data,
     size_t start = 0) noexcept
 {
-    const size_t remaining = data.size() - start;
+    [[maybe_unused]] const size_t remaining = data.size() - start;
 #if NFX_AVX512_AVAILABLE
     if (remaining >= 128) [[likely]] {
         return find_equals_avx512(data, start);
@@ -481,7 +489,7 @@ inline size_t find_equals(
 
 /// Count SOH occurrences
 /// Priority: AVX-512 > AVX2 > Scalar
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline size_t count_soh(std::span<const char> data) noexcept {
 #if NFX_AVX512_AVAILABLE
     if (data.size() >= 128) [[likely]] {
@@ -528,7 +536,7 @@ struct MessageBoundary {
 };
 
 /// Find message boundary (start: "8=", end: "10=xxx|")
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline MessageBoundary find_message_boundary(
     std::span<const char> data,
     size_t start = 0) noexcept
@@ -586,3 +594,7 @@ static_assert(sizeof(MessageBoundary) <= CACHE_LINE_SIZE,
     "MessageBoundary should fit within a single cache line");
 
 } // namespace nfx::simd
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

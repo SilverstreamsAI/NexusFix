@@ -196,6 +196,15 @@
     #define NFX_RESTRICT
 #endif
 
+// Hot function (optimize for speed, place in hot section)
+#if NFX_COMPILER_GCC || NFX_COMPILER_CLANG
+    #define NFX_HOT [[gnu::hot]]
+    #define NFX_COLD [[gnu::cold]]
+#else
+    #define NFX_HOT
+    #define NFX_COLD
+#endif
+
 // Cache line size (for alignment)
 #if defined(__cpp_lib_hardware_interference_size)
     #include <new>
