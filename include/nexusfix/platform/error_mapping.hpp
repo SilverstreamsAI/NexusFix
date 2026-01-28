@@ -208,24 +208,28 @@ namespace nfx {
 /// @return Error description (platform-specific format)
 [[nodiscard]] inline const char* socket_error_string(int os_error) noexcept {
 #if NFX_PLATFORM_WINDOWS
-    // Windows: Use FormatMessage (returns static buffer - not thread safe)
-    // For production, consider thread-local buffer
-    static thread_local char buffer[256];
-    FormatMessageA(
+    // Windows: Use FormatMessage
+    static thread_local char buffer[256] = {0};
+    DWORD len = FormatMessageA(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr,
         static_cast<DWORD>(os_error),
         MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
         buffer,
-        sizeof(buffer),
+        sizeof(buffer) - 1,
         nullptr
     );
+    if (len == 0) {
+        buffer[0] = '\0';
+        return "Unknown error";
+    }
+    buffer[len] = '\0';  // Ensure null-termination
     return buffer;
 #else
     // POSIX: Use strerror_r for thread safety
-    static thread_local char buffer[256];
-#if (_POSIX_C_SOURCE >= 200112L) && !defined(_GNU_SOURCE)
-    // XSI-compliant strerror_r
+    static thread_local char buffer[256] = {0};
+#if NFX_PLATFORM_MACOS || ((_POSIX_C_SOURCE >= 200112L) && !defined(_GNU_SOURCE))
+    // XSI-compliant strerror_r (macOS always uses this, Linux uses it when _GNU_SOURCE is not defined)
     if (strerror_r(os_error, buffer, sizeof(buffer)) == 0) {
         return buffer;
     }

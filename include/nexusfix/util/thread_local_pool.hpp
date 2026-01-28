@@ -22,6 +22,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "nexusfix/platform/platform.hpp"
+
 namespace nfx::util {
 
 // ============================================================================
@@ -54,7 +56,7 @@ public:
 
     /// Acquire an object from the pool
     /// Returns nullptr if pool is exhausted (caller should fallback to heap)
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     T* acquire() noexcept {
         if (free_count_ == 0) {
             ++stats_.pool_exhausted;
@@ -70,7 +72,7 @@ public:
 
     /// Release an object back to the pool
     /// @param obj Must be a pointer previously returned by acquire()
-    [[gnu::hot]]
+    NFX_HOT
     void release(T* obj) noexcept {
         if (!obj) return;
 

@@ -53,6 +53,13 @@ using JumboBuffer = AlignedBuffer<65536>;  // Maximum FIX message size
 // Fixed-Size Pool Allocator (Lock-free, O(1) allocation)
 // ============================================================================
 
+// Disable MSVC warning C4324: structure was padded due to alignment specifier
+// This is expected behavior for cache-line aligned structures
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4324)
+#endif
+
 /// Pool of fixed-size blocks with O(1) allocation (no syscalls on hot path)
 template <size_t BlockSize, size_t NumBlocks>
 class alignas(CACHE_LINE_SIZE) FixedPool {
@@ -139,7 +146,8 @@ private:
         return resource_.allocate(bytes, alignment);
     }
 
-    void do_deallocate(void* p, size_t bytes, size_t alignment) override {
+    void do_deallocate([[maybe_unused]] void* p, [[maybe_unused]] size_t bytes,
+                        [[maybe_unused]] size_t alignment) override {
         // Monotonic buffer doesn't deallocate individual blocks
     }
 
@@ -286,5 +294,9 @@ private:
     MessagePool* pool_;
     std::span<char> buffer_;
 };
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 } // namespace nfx

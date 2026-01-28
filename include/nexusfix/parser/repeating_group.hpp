@@ -6,6 +6,7 @@
 #include <array>
 #include <optional>
 
+#include "nexusfix/platform/platform.hpp"
 #include "nexusfix/types/tag.hpp"
 #include "nexusfix/types/field_types.hpp"
 #include "nexusfix/types/market_data_types.hpp"
@@ -27,26 +28,27 @@ public:
         size_t end_pos;
 
         /// Get a field value by tag number
-        [[nodiscard]] [[gnu::hot]]
-        FieldView get_field(int tag) const noexcept {
+        [[nodiscard]] NFX_HOT
+        FieldView get_field(int target_tag) const noexcept {
             FieldIterator iter{data};
             while (iter.has_next()) [[likely]] {
                 FieldView field = iter.next();
                 if (!field.is_valid()) [[unlikely]] break;
-                if (field.tag() == tag) [[unlikely]] {
+                if (field.tag == target_tag) [[unlikely]] {
                     return field;
                 }
             }
             return FieldView{};
         }
 
-        [[nodiscard]] std::string_view get_string(int tag) const noexcept {
-            return get_field(tag).value();
+        [[nodiscard]] std::string_view get_string(int target_tag) const noexcept {
+            auto fv = get_field(target_tag);
+            return std::string_view{fv.value.data(), fv.value.size()};
         }
 
-        [[nodiscard]] char get_char(int tag) const noexcept {
-            auto fv = get_field(tag);
-            return fv.is_valid() && !fv.value().empty() ? fv.value()[0] : '\0';
+        [[nodiscard]] char get_char(int target_tag) const noexcept {
+            auto fv = get_field(target_tag);
+            return fv.is_valid() && !fv.value.empty() ? fv.value[0] : '\0';
         }
 
         [[nodiscard]] std::optional<int64_t> get_int(int tag) const noexcept {
@@ -80,7 +82,7 @@ public:
         return current_index_ < total_count_;
     }
 
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     Entry next() noexcept {
         if (current_index_ >= total_count_) [[unlikely]] {
             return Entry{{}, 0, 0};
@@ -110,7 +112,7 @@ private:
         current_pos_ = find_tag_position(0, delimiter_tag_);
     }
 
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     size_t find_next_entry_start() noexcept {
         // Find the next occurrence of delimiter tag, or end of data
         size_t search_start = current_pos_;
@@ -147,7 +149,7 @@ private:
         return find_tag_position(search_start, delimiter_tag_);
     }
 
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     size_t find_tag_position(size_t start, int tag) const noexcept {
         // Convert tag to string for comparison
         char tag_buf[12];
@@ -203,7 +205,7 @@ private:
 // ============================================================================
 
 /// Parse a single MDEntry from a repeating group entry
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 inline MDEntry parse_md_entry(const RepeatingGroupIterator::Entry& entry) noexcept {
     MDEntry md;
 
@@ -266,7 +268,7 @@ public:
         return iter_.has_next();
     }
 
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     MDEntry next() noexcept {
         auto entry = iter_.next();
         return parse_md_entry(entry);

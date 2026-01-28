@@ -559,8 +559,8 @@ TEST(sequence_reset) {
 
     seq_mgr.next_outbound();
     seq_mgr.next_outbound();
-    seq_mgr.validate_inbound(1);
-    seq_mgr.validate_inbound(2);
+    (void)seq_mgr.validate_inbound(1);
+    (void)seq_mgr.validate_inbound(2);
 
     seq_mgr.reset();
 
@@ -608,9 +608,9 @@ TEST(ord_status_values) {
 /// Test: TimeInForce values match QuickFIX
 TEST(time_in_force_values) {
     ASSERT_EQ(static_cast<char>(TimeInForce::Day), '0');
-    ASSERT_EQ(static_cast<char>(TimeInForce::GTC), '1');
-    ASSERT_EQ(static_cast<char>(TimeInForce::IOC), '3');
-    ASSERT_EQ(static_cast<char>(TimeInForce::FOK), '4');
+    ASSERT_EQ(static_cast<char>(TimeInForce::GoodTillCancel), '1');
+    ASSERT_EQ(static_cast<char>(TimeInForce::ImmediateOrCancel), '3');
+    ASSERT_EQ(static_cast<char>(TimeInForce::FillOrKill), '4');
 }
 
 // ============================================================================
