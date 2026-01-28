@@ -213,33 +213,37 @@ if(NFX_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-# Install targets
-include(GNUInstallDirs)
-install(TARGETS nexusfix
-    EXPORT nexusfixTargets
-)
-install(DIRECTORY include/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-install(EXPORT nexusfixTargets
-    FILE nexusfixTargets.cmake
-    NAMESPACE nexusfix::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nexusfix
-)
+# Install targets (only when no FetchContent dependencies are linked)
+# Quill and Abseil don't provide export sets, so we can only export
+# the pure header-only library without these dependencies
+if(NOT NFX_ENABLE_LOGGING AND NOT NFX_ENABLE_ABSEIL)
+    include(GNUInstallDirs)
+    install(TARGETS nexusfix
+        EXPORT nexusfixTargets
+    )
+    install(DIRECTORY include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+    install(EXPORT nexusfixTargets
+        FILE nexusfixTargets.cmake
+        NAMESPACE nexusfix::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nexusfix
+    )
 
-# Package configuration
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfigVersion.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
-configure_file(cmake/nexusfixConfig.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfig.cmake"
-    @ONLY
-)
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nexusfix
-)
+    # Package configuration
+    include(CMakePackageConfigHelpers)
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
+    configure_file(cmake/nexusfixConfig.cmake.in
+        "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfig.cmake"
+        @ONLY
+    )
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nexusfix
+    )
+endif()
