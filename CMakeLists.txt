@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(nexusfix VERSION 0.1.0 LANGUAGES CXX)
+project(nexusfix VERSION 0.1.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -212,3 +212,34 @@ endif()
 if(NFX_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
+# Install targets
+include(GNUInstallDirs)
+install(TARGETS nexusfix
+    EXPORT nexusfixTargets
+)
+install(DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+install(EXPORT nexusfixTargets
+    FILE nexusfixTargets.cmake
+    NAMESPACE nexusfix::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nexusfix
+)
+
+# Package configuration
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+configure_file(cmake/nexusfixConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfig.cmake"
+    @ONLY
+)
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/nexusfixConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nexusfix
+)
