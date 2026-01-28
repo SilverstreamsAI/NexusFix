@@ -1,50 +1,47 @@
 #pragma once
 
-/// @file tcp_transport.hpp
-/// @brief TCP transport implementation using platform abstraction layer
+/// @file winsock_transport.hpp
+/// @brief Windows Winsock2 TCP transport implementation
 ///
-/// This file provides TCP socket functionality for POSIX platforms (Linux, macOS).
-/// For Windows, use winsock_transport.hpp instead.
+/// This file provides TCP socket functionality for Windows platforms.
+/// For POSIX platforms (Linux, macOS), use tcp_transport.hpp instead.
 
 #include "nexusfix/platform/platform.hpp"
+
+#if NFX_PLATFORM_WINDOWS
+
 #include "nexusfix/platform/socket_types.hpp"
 #include "nexusfix/platform/error_mapping.hpp"
 #include "nexusfix/transport/socket.hpp"
+#include "nexusfix/transport/winsock_init.hpp"
 
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
 
-// Platform-specific poll header
-#if NFX_PLATFORM_POSIX
-    #include <poll.h>
-#elif NFX_PLATFORM_WINDOWS
-    // Windows uses WSAPoll from winsock2.h (already included via socket_types.hpp)
-#endif
-
 namespace nfx {
 
 // ============================================================================
-// TCP Socket (Cross-platform)
+// Winsock Socket (Windows)
 // ============================================================================
 
-/// TCP socket implementation using platform abstraction layer
-class TcpSocket {
+/// TCP socket implementation using Windows Winsock2
+class WinsockSocket {
 public:
-    TcpSocket() noexcept
+    WinsockSocket() noexcept
         : fd_{INVALID_SOCKET_HANDLE}
         , state_{ConnectionState::Disconnected} {}
 
-    ~TcpSocket() {
+    ~WinsockSocket() {
         close();
     }
 
     // Non-copyable
-    TcpSocket(const TcpSocket&) = delete;
-    TcpSocket& operator=(const TcpSocket&) = delete;
+    WinsockSocket(const WinsockSocket&) = delete;
+    WinsockSocket& operator=(const WinsockSocket&) = delete;
 
     // Movable
-    TcpSocket(TcpSocket&& other) noexcept
+    WinsockSocket(WinsockSocket&& other) noexcept
         : fd_{other.fd_}
         , state_{other.state_}
         , options_{other.options_}
@@ -53,7 +50,7 @@ public:
         other.state_ = ConnectionState::Disconnected;
     }
 
-    TcpSocket& operator=(TcpSocket&& other) noexcept {
+    WinsockSocket& operator=(WinsockSocket&& other) noexcept {
         if (this != &other) {
             close();
             fd_ = other.fd_;
@@ -67,7 +64,12 @@ public:
 
     /// Create socket
     [[nodiscard]] TransportResult<void> create() noexcept {
-        fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
+        // Ensure Winsock is initialized
+        if (!WinsockInit::ensure()) {
+            return std::unexpected{WinsockInit::make_init_error()};
+        }
+
+        fd_ = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (!is_valid_socket(fd_)) {
             return std::unexpected{make_socket_error()};
         }
@@ -90,6 +92,7 @@ public:
         struct addrinfo hints{};
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
 
         char port_str[8];
         std::snprintf(port_str, sizeof(port_str), "%u", port);
@@ -108,10 +111,10 @@ public:
         }
 
         // Try to connect
-        ret = ::connect(fd_, result->ai_addr, static_cast<SocketLength>(result->ai_addrlen));
+        ret = ::connect(fd_, result->ai_addr, static_cast<int>(result->ai_addrlen));
         ::freeaddrinfo(result);
 
-        if (ret != 0) {
+        if (ret == SOCKET_ERROR) {
             state_ = ConnectionState::Error;
             return std::unexpected{make_socket_error()};
         }
@@ -125,6 +128,8 @@ public:
     void close() noexcept {
         if (is_valid_socket(fd_)) {
             state_ = ConnectionState::Disconnecting;
+            // Graceful shutdown
+            ::shutdown(fd_, SD_BOTH);
             close_socket(fd_);
             fd_ = INVALID_SOCKET_HANDLE;
             state_ = ConnectionState::Disconnected;
@@ -142,8 +147,8 @@ public:
             return std::unexpected{TransportError{TransportErrorCode::ConnectionClosed}};
         }
 
-        IoSize sent = ::send(fd_, data.data(), static_cast<IoSize>(data.size()), MSG_NOSIGNAL_COMPAT);
-        if (sent < 0) {
+        int sent = ::send(fd_, data.data(), static_cast<int>(data.size()), 0);
+        if (sent == SOCKET_ERROR) {
             int err = get_last_socket_error();
             if (is_would_block_error(err)) {
                 return 0;
@@ -161,8 +166,8 @@ public:
             return std::unexpected{TransportError{TransportErrorCode::ConnectionClosed}};
         }
 
-        IoSize received = ::recv(fd_, buffer.data(), static_cast<IoSize>(buffer.size()), 0);
-        if (received < 0) {
+        int received = ::recv(fd_, buffer.data(), static_cast<int>(buffer.size()), 0);
+        if (received == SOCKET_ERROR) {
             int err = get_last_socket_error();
             if (is_would_block_error(err)) {
                 return 0;
@@ -179,42 +184,28 @@ public:
         return static_cast<size_t>(received);
     }
 
-    /// Poll for read events
+    /// Poll for read events using WSAPoll
     [[nodiscard]] bool poll_read(int timeout_ms) noexcept {
         if (!is_valid_socket(fd_)) return false;
 
-#if NFX_PLATFORM_WINDOWS
         WSAPOLLFD pfd{};
         pfd.fd = fd_;
         pfd.events = POLLIN;
+
         int ret = WSAPoll(&pfd, 1, timeout_ms);
         return ret > 0 && (pfd.revents & POLLIN);
-#else
-        struct pollfd pfd{};
-        pfd.fd = fd_;
-        pfd.events = POLLIN;
-        int ret = ::poll(&pfd, 1, timeout_ms);
-        return ret > 0 && (pfd.revents & POLLIN);
-#endif
     }
 
-    /// Poll for write events
+    /// Poll for write events using WSAPoll
     [[nodiscard]] bool poll_write(int timeout_ms) noexcept {
         if (!is_valid_socket(fd_)) return false;
 
-#if NFX_PLATFORM_WINDOWS
         WSAPOLLFD pfd{};
         pfd.fd = fd_;
         pfd.events = POLLOUT;
+
         int ret = WSAPoll(&pfd, 1, timeout_ms);
         return ret > 0 && (pfd.revents & POLLOUT);
-#else
-        struct pollfd pfd{};
-        pfd.fd = fd_;
-        pfd.events = POLLOUT;
-        int ret = ::poll(&pfd, 1, timeout_ms);
-        return ret > 0 && (pfd.revents & POLLOUT);
-#endif
     }
 
     /// Set TCP_NODELAY option
@@ -291,13 +282,13 @@ private:
 };
 
 // ============================================================================
-// TCP Transport (implements ITransport)
+// Winsock Transport (implements ITransport)
 // ============================================================================
 
-/// TCP transport implementation
-class TcpTransport : public ITransport {
+/// Windows Winsock2 TCP transport implementation
+class WinsockTransport : public ITransport {
 public:
-    TcpTransport() noexcept = default;
+    WinsockTransport() noexcept = default;
 
     [[nodiscard]] TransportResult<void> connect(
         std::string_view host,
@@ -339,36 +330,41 @@ public:
     }
 
     /// Get underlying socket
-    [[nodiscard]] TcpSocket& socket() noexcept { return socket_; }
-    [[nodiscard]] const TcpSocket& socket() const noexcept { return socket_; }
+    [[nodiscard]] WinsockSocket& socket() noexcept { return socket_; }
+    [[nodiscard]] const WinsockSocket& socket() const noexcept { return socket_; }
 
 private:
-    TcpSocket socket_;
+    WinsockSocket socket_;
 };
 
 // ============================================================================
-// TCP Acceptor (for FIX Acceptor)
+// Winsock Acceptor (for FIX Acceptor)
 // ============================================================================
 
-/// TCP server socket for accepting connections
-class TcpAcceptor {
+/// Windows TCP server socket for accepting connections
+class WinsockAcceptor {
 public:
-    TcpAcceptor() noexcept : fd_{INVALID_SOCKET_HANDLE} {}
+    WinsockAcceptor() noexcept : fd_{INVALID_SOCKET_HANDLE} {}
 
-    ~TcpAcceptor() {
+    ~WinsockAcceptor() {
         close();
     }
 
     // Non-copyable, non-movable
-    TcpAcceptor(const TcpAcceptor&) = delete;
-    TcpAcceptor& operator=(const TcpAcceptor&) = delete;
+    WinsockAcceptor(const WinsockAcceptor&) = delete;
+    WinsockAcceptor& operator=(const WinsockAcceptor&) = delete;
 
     /// Bind and listen on port
     [[nodiscard]] TransportResult<void> listen(
         uint16_t port,
         int backlog = 128) noexcept
     {
-        fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
+        // Ensure Winsock is initialized
+        if (!WinsockInit::ensure()) {
+            return std::unexpected{WinsockInit::make_init_error()};
+        }
+
+        fd_ = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (!is_valid_socket(fd_)) {
             return std::unexpected{make_socket_error()};
         }
@@ -381,13 +377,13 @@ public:
         addr.sin_addr.s_addr = INADDR_ANY;
         addr.sin_port = htons(port);
 
-        if (::bind(fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+        if (::bind(fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR) {
             auto err = make_socket_error();
             close();
             return std::unexpected{err};
         }
 
-        if (::listen(fd_, backlog) < 0) {
+        if (::listen(fd_, backlog) == SOCKET_ERROR) {
             auto err = make_socket_error();
             close();
             return std::unexpected{err};
@@ -403,7 +399,7 @@ public:
         }
 
         struct sockaddr_in client_addr{};
-        SocketLength addr_len = sizeof(client_addr);
+        int addr_len = sizeof(client_addr);
 
         SocketHandle client_fd = ::accept(fd_,
             reinterpret_cast<struct sockaddr*>(&client_addr),
@@ -437,3 +433,18 @@ private:
 };
 
 } // namespace nfx
+
+#else  // !NFX_PLATFORM_WINDOWS
+
+// ============================================================================
+// Stub for non-Windows platforms
+// ============================================================================
+
+namespace nfx {
+
+// On non-Windows, use TcpSocket/TcpTransport/TcpAcceptor from tcp_transport.hpp
+// These type aliases provide a consistent API across platforms
+
+} // namespace nfx
+
+#endif  // NFX_PLATFORM_WINDOWS

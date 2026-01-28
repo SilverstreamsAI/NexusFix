@@ -139,13 +139,35 @@ struct SessionError {
 
 enum class TransportErrorCode : uint8_t {
     None = 0,
+
+    // Connection errors
     ConnectionFailed,
     ConnectionClosed,
+    ConnectionRefused,
+    ConnectionReset,
+    ConnectionAborted,
+
+    // I/O errors
     ReadError,
     WriteError,
     Timeout,
+
+    // Address errors
     AddressResolutionFailed,
-    SocketError
+    NetworkUnreachable,
+    HostUnreachable,
+
+    // Socket state errors
+    SocketError,
+    WouldBlock,
+    InProgress,
+    NotConnected,
+    NoBufferSpace,
+
+    // Platform-specific errors
+    WinsockInitFailed,    // WSAStartup failed (Windows)
+    IocpError,            // IOCP operation failed (Windows)
+    KqueueError           // kqueue operation failed (macOS)
 };
 
 struct TransportError {
@@ -168,13 +190,30 @@ struct TransportError {
     [[nodiscard]] constexpr std::string_view message() const noexcept {
         switch (code) {
             case TransportErrorCode::None:           return "No error";
+            // Connection errors
             case TransportErrorCode::ConnectionFailed: return "Connection failed";
             case TransportErrorCode::ConnectionClosed: return "Connection closed";
+            case TransportErrorCode::ConnectionRefused: return "Connection refused";
+            case TransportErrorCode::ConnectionReset: return "Connection reset by peer";
+            case TransportErrorCode::ConnectionAborted: return "Connection aborted";
+            // I/O errors
             case TransportErrorCode::ReadError:      return "Read error";
             case TransportErrorCode::WriteError:     return "Write error";
             case TransportErrorCode::Timeout:        return "Timeout";
+            // Address errors
             case TransportErrorCode::AddressResolutionFailed: return "Address resolution failed";
+            case TransportErrorCode::NetworkUnreachable: return "Network unreachable";
+            case TransportErrorCode::HostUnreachable: return "Host unreachable";
+            // Socket state errors
             case TransportErrorCode::SocketError:    return "Socket error";
+            case TransportErrorCode::WouldBlock:     return "Operation would block";
+            case TransportErrorCode::InProgress:     return "Operation in progress";
+            case TransportErrorCode::NotConnected:   return "Socket not connected";
+            case TransportErrorCode::NoBufferSpace:  return "No buffer space available";
+            // Platform-specific errors
+            case TransportErrorCode::WinsockInitFailed: return "Winsock initialization failed";
+            case TransportErrorCode::IocpError:      return "IOCP operation failed";
+            case TransportErrorCode::KqueueError:    return "kqueue operation failed";
         }
         return "Unknown error";
     }
