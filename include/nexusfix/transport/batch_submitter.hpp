@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "nexusfix/platform/platform.hpp"
 #include "nexusfix/transport/io_uring_transport.hpp"
 
 #include <array>
@@ -74,7 +75,7 @@ public:
         : ctx_{ctx}, count_{0} {}
 
     /// Queue a send operation
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool queue_send(int fd, std::span<const char> data, void* user_data = nullptr) noexcept {
         if (count_ >= MaxBatchSize) return false;
 
@@ -89,7 +90,7 @@ public:
     }
 
     /// Queue a recv operation
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool queue_recv(int fd, std::span<char> buffer, void* user_data = nullptr) noexcept {
         if (count_ >= MaxBatchSize) return false;
 
@@ -104,7 +105,7 @@ public:
     }
 
     /// Queue a send using registered buffer
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool queue_send_fixed(int fd, uint16_t buf_index, size_t len,
                           size_t offset = 0, void* user_data = nullptr) noexcept {
         if (count_ >= MaxBatchSize) return false;
@@ -120,7 +121,7 @@ public:
     }
 
     /// Queue a recv using registered buffer
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool queue_recv_fixed(int fd, uint16_t buf_index, size_t len,
                           size_t offset = 0, void* user_data = nullptr) noexcept {
         if (count_ >= MaxBatchSize) return false;
@@ -136,7 +137,7 @@ public:
     }
 
     /// Queue a no-op (for testing/benchmarking)
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool queue_nop(void* user_data = nullptr) noexcept {
         if (count_ >= MaxBatchSize) return false;
 
@@ -152,7 +153,7 @@ public:
 
     /// Submit all queued operations in a single syscall
     /// Returns number of operations submitted, or negative error
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     int submit() noexcept {
         if (count_ == 0) return 0;
 
@@ -220,7 +221,7 @@ public:
         : batch_{ctx}, total_submitted_{0}, total_flushes_{0} {}
 
     /// Queue send, auto-flush if batch is full
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool queue_send(int fd, std::span<const char> data, void* user_data = nullptr) noexcept {
         if (batch_.is_full()) {
             flush();
@@ -229,7 +230,7 @@ public:
     }
 
     /// Queue recv, auto-flush if batch is full
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool queue_recv(int fd, std::span<char> buffer, void* user_data = nullptr) noexcept {
         if (batch_.is_full()) {
             flush();
@@ -238,7 +239,7 @@ public:
     }
 
     /// Queue no-op, auto-flush if batch is full
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool queue_nop(void* user_data = nullptr) noexcept {
         if (batch_.is_full()) {
             flush();

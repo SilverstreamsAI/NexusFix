@@ -10,7 +10,11 @@
 #include "nexusfix/transport/transport_factory.hpp"
 
 #include <iostream>
-#include <cassert>
+#include <stdexcept>
+
+// Test assertion that works in Release mode (unlike cassert)
+#define TEST_ASSERT(cond) \
+    do { if (!(cond)) { throw std::runtime_error("Test failed: " #cond); } } while(0)
 
 using namespace nfx;
 
@@ -25,20 +29,20 @@ void test_platform_detection() {
                   "No platform detected");
 
 #if NFX_PLATFORM_LINUX
-    assert(platform::is_linux());
-    assert(platform::is_posix());
-    assert(!platform::is_windows());
-    assert(!platform::is_macos());
+    TEST_ASSERT(platform::is_linux());
+    TEST_ASSERT(platform::is_posix());
+    TEST_ASSERT(!platform::is_windows());
+    TEST_ASSERT(!platform::is_macos());
 #elif NFX_PLATFORM_WINDOWS
-    assert(platform::is_windows());
-    assert(!platform::is_linux());
-    assert(!platform::is_macos());
-    assert(!platform::is_posix());
+    TEST_ASSERT(platform::is_windows());
+    TEST_ASSERT(!platform::is_linux());
+    TEST_ASSERT(!platform::is_macos());
+    TEST_ASSERT(!platform::is_posix());
 #elif NFX_PLATFORM_MACOS
-    assert(platform::is_macos());
-    assert(platform::is_posix());
-    assert(!platform::is_windows());
-    assert(!platform::is_linux());
+    TEST_ASSERT(platform::is_macos());
+    TEST_ASSERT(platform::is_posix());
+    TEST_ASSERT(!platform::is_windows());
+    TEST_ASSERT(!platform::is_linux());
 #endif
 
     std::cout << "Platform detection: PASS\n";
@@ -46,20 +50,19 @@ void test_platform_detection() {
 
 void test_socket_types() {
     // Test invalid socket constant
-    SocketHandle invalid = INVALID_SOCKET_HANDLE;
-    assert(!is_valid_socket(invalid));
+    TEST_ASSERT(!is_valid_socket(INVALID_SOCKET_HANDLE));
 
     // Test socket creation
     SocketHandle sock = ::socket(AF_INET, SOCK_STREAM, 0);
     if (is_valid_socket(sock)) {
-        assert(is_valid_socket(sock));
+        TEST_ASSERT(is_valid_socket(sock));
 
         // Test socket options
-        assert(set_tcp_nodelay(sock, true));
-        assert(set_socket_keepalive(sock, true));
-        assert(set_socket_reuseaddr(sock, true));
-        assert(set_socket_nonblocking(sock, true));
-        assert(set_socket_nonblocking(sock, false));
+        TEST_ASSERT(set_tcp_nodelay(sock, true));
+        TEST_ASSERT(set_socket_keepalive(sock, true));
+        TEST_ASSERT(set_socket_reuseaddr(sock, true));
+        TEST_ASSERT(set_socket_nonblocking(sock, true));
+        TEST_ASSERT(set_socket_nonblocking(sock, false));
 
         close_socket(sock);
     }
@@ -70,76 +73,76 @@ void test_socket_types() {
 void test_error_mapping() {
     // Test POSIX error mapping
 #if NFX_PLATFORM_POSIX
-    assert(map_socket_error(ECONNREFUSED) == TransportErrorCode::ConnectionRefused);
-    assert(map_socket_error(ECONNRESET) == TransportErrorCode::ConnectionReset);
-    assert(map_socket_error(ETIMEDOUT) == TransportErrorCode::Timeout);
-    assert(map_socket_error(EAGAIN) == TransportErrorCode::WouldBlock);
-    assert(map_socket_error(EINPROGRESS) == TransportErrorCode::InProgress);
-    assert(map_socket_error(ENETUNREACH) == TransportErrorCode::NetworkUnreachable);
-    assert(map_socket_error(0) == TransportErrorCode::None);
+    TEST_ASSERT(map_socket_error(ECONNREFUSED) == TransportErrorCode::ConnectionRefused);
+    TEST_ASSERT(map_socket_error(ECONNRESET) == TransportErrorCode::ConnectionReset);
+    TEST_ASSERT(map_socket_error(ETIMEDOUT) == TransportErrorCode::Timeout);
+    TEST_ASSERT(map_socket_error(EAGAIN) == TransportErrorCode::WouldBlock);
+    TEST_ASSERT(map_socket_error(EINPROGRESS) == TransportErrorCode::InProgress);
+    TEST_ASSERT(map_socket_error(ENETUNREACH) == TransportErrorCode::NetworkUnreachable);
+    TEST_ASSERT(map_socket_error(0) == TransportErrorCode::None);
 #endif
 
 #if NFX_PLATFORM_WINDOWS
-    assert(map_socket_error(WSAECONNREFUSED) == TransportErrorCode::ConnectionRefused);
-    assert(map_socket_error(WSAECONNRESET) == TransportErrorCode::ConnectionReset);
-    assert(map_socket_error(WSAETIMEDOUT) == TransportErrorCode::Timeout);
-    assert(map_socket_error(WSAEWOULDBLOCK) == TransportErrorCode::WouldBlock);
-    assert(map_socket_error(0) == TransportErrorCode::None);
+    TEST_ASSERT(map_socket_error(WSAECONNREFUSED) == TransportErrorCode::ConnectionRefused);
+    TEST_ASSERT(map_socket_error(WSAECONNRESET) == TransportErrorCode::ConnectionReset);
+    TEST_ASSERT(map_socket_error(WSAETIMEDOUT) == TransportErrorCode::Timeout);
+    TEST_ASSERT(map_socket_error(WSAEWOULDBLOCK) == TransportErrorCode::WouldBlock);
+    TEST_ASSERT(map_socket_error(0) == TransportErrorCode::None);
 #endif
 
     // Test error factory
     auto err = make_transport_error(TransportErrorCode::ConnectionFailed, 42);
-    assert(err.code == TransportErrorCode::ConnectionFailed);
-    assert(err.system_errno == 42);
+    TEST_ASSERT(err.code == TransportErrorCode::ConnectionFailed);
+    TEST_ASSERT(err.system_errno == 42);
 
     std::cout << "Error mapping: PASS\n";
 }
 
 void test_tcp_socket() {
     TcpSocket sock;
-    assert(!sock.is_connected());
-    assert(sock.state() == ConnectionState::Disconnected);
+    TEST_ASSERT(!sock.is_connected());
+    TEST_ASSERT(sock.state() == ConnectionState::Disconnected);
 
     // Create socket
     auto result = sock.create();
-    assert(result.has_value());
-    assert(is_valid_socket(sock.fd()));
+    TEST_ASSERT(result.has_value());
+    TEST_ASSERT(is_valid_socket(sock.fd()));
 
     // Test options before connect
-    assert(sock.set_nodelay(true));
-    assert(sock.set_keepalive(true));
+    TEST_ASSERT(sock.set_nodelay(true));
+    TEST_ASSERT(sock.set_keepalive(true));
 
     // Close socket
     sock.close();
-    assert(!is_valid_socket(sock.fd()));
-    assert(sock.state() == ConnectionState::Disconnected);
+    TEST_ASSERT(!is_valid_socket(sock.fd()));
+    TEST_ASSERT(sock.state() == ConnectionState::Disconnected);
 
     std::cout << "TCP socket: PASS\n";
 }
 
 void test_tcp_transport() {
     TcpTransport transport;
-    assert(!transport.is_connected());
+    TEST_ASSERT(!transport.is_connected());
 
     // Test options before connect
-    assert(transport.set_nodelay(true));
-    assert(transport.set_keepalive(true));
+    TEST_ASSERT(transport.set_nodelay(true));
+    TEST_ASSERT(transport.set_keepalive(true));
 
     std::cout << "TCP transport: PASS\n";
 }
 
 void test_tcp_acceptor() {
     TcpAcceptor acceptor;
-    assert(!acceptor.is_listening());
+    TEST_ASSERT(!acceptor.is_listening());
 
     // Listen on ephemeral port
     auto result = acceptor.listen(0);  // Port 0 = let OS choose
-    assert(result.has_value());
-    assert(acceptor.is_listening());
+    TEST_ASSERT(result.has_value());
+    TEST_ASSERT(acceptor.is_listening());
 
     // Close
     acceptor.close();
-    assert(!acceptor.is_listening());
+    TEST_ASSERT(!acceptor.is_listening());
 
     std::cout << "TCP acceptor: PASS\n";
 }
@@ -149,19 +152,19 @@ void test_new_error_codes() {
     TransportError err;
 
     err.code = TransportErrorCode::ConnectionRefused;
-    assert(err.message() == "Connection refused");
+    TEST_ASSERT(err.message() == "Connection refused");
 
     err.code = TransportErrorCode::ConnectionReset;
-    assert(err.message() == "Connection reset by peer");
+    TEST_ASSERT(err.message() == "Connection reset by peer");
 
     err.code = TransportErrorCode::NetworkUnreachable;
-    assert(err.message() == "Network unreachable");
+    TEST_ASSERT(err.message() == "Network unreachable");
 
     err.code = TransportErrorCode::WouldBlock;
-    assert(err.message() == "Operation would block");
+    TEST_ASSERT(err.message() == "Operation would block");
 
     err.code = TransportErrorCode::WinsockInitFailed;
-    assert(err.message() == "Winsock initialization failed");
+    TEST_ASSERT(err.message() == "Winsock initialization failed");
 
     std::cout << "New error codes: PASS\n";
 }
@@ -179,45 +182,55 @@ void test_transport_factory() {
 
     // Create default transport
     auto transport = TransportFactory::create();
-    assert(transport != nullptr);
-    assert(!transport->is_connected());
+    TEST_ASSERT(transport != nullptr);
+    TEST_ASSERT(!transport->is_connected());
 
     // Create simple transport
     auto simple = TransportFactory::create_simple();
-    assert(simple != nullptr);
+    TEST_ASSERT(simple != nullptr);
 
     // Create via convenience function
     auto t1 = make_transport();
-    assert(t1 != nullptr);
+    TEST_ASSERT(t1 != nullptr);
 
     auto t2 = make_simple_transport();
-    assert(t2 != nullptr);
+    TEST_ASSERT(t2 != nullptr);
 
     auto t3 = make_fast_transport();
-    assert(t3 != nullptr);
+    TEST_ASSERT(t3 != nullptr);
 
     // Test platform type aliases
     PlatformSocket sock;
-    assert(!sock.is_connected());
+    TEST_ASSERT(!sock.is_connected());
 
     PlatformTransport pt;
-    assert(!pt.is_connected());
+    TEST_ASSERT(!pt.is_connected());
 
     std::cout << "Transport factory: PASS\n";
 }
 
 void test_winsock_init_stub() {
     // On non-Windows, WinsockInit is a no-op stub
-    assert(WinsockInit::initialize());
-    assert(WinsockInit::ensure());
-    assert(WinsockInit::is_initialized());
-    assert(WinsockInit::last_error() == 0);
+    TEST_ASSERT(WinsockInit::initialize());
+    TEST_ASSERT(WinsockInit::ensure());
+    TEST_ASSERT(WinsockInit::is_initialized());
+    TEST_ASSERT(WinsockInit::last_error() == 0);
 
     std::cout << "Winsock init stub: PASS\n";
 }
 
 int main() {
     std::cout << "=== Platform Abstraction Tests ===\n\n";
+
+    // IMPORTANT: On Windows, Winsock must be initialized before any socket API calls
+#if NFX_PLATFORM_WINDOWS
+    std::cout << "Initializing Winsock...\n";
+    if (!WinsockInit::ensure()) {
+        std::cerr << "FATAL: Winsock initialization failed, error=" << WinsockInit::last_error() << "\n";
+        return 1;
+    }
+    std::cout << "Winsock initialized.\n\n";
+#endif
 
     test_platform_detection();
     test_socket_types();

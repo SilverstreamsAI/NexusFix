@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux - GCC (primary)
+          - os: ubuntu-24.04
+            compiler: gcc
+            cc: gcc-14
+            cxx: g++-14
+            name: Linux GCC 14
+
+          # Linux - Clang
+          - os: ubuntu-24.04
+            compiler: clang
+            cc: clang-18
+            cxx: clang++-18
+            name: Linux Clang 18
+
+          # Windows - MSVC
+          - os: windows-latest
+            compiler: msvc
+            name: Windows MSVC
+
+          # macOS - Apple Clang
+          - os: macos-latest
+            compiler: apple-clang
+            cc: clang
+            cxx: clang++
+            name: macOS Apple Clang
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libc++-18-dev libc++abi-18-dev
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ninja
+
+      - name: Setup MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DNFX_BUILD_TESTS=ON \
+            -DNFX_BUILD_BENCHMARKS=OFF \
+            -DNFX_BUILD_EXAMPLES=OFF \
+            -DNFX_ENABLE_SIMD=OFF \
+            -DNFX_ENABLE_LOGGING=OFF \
+            -DNFX_ENABLE_ABSEIL=OFF
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DNFX_BUILD_TESTS=ON `
+            -DNFX_BUILD_BENCHMARKS=OFF `
+            -DNFX_BUILD_EXAMPLES=OFF `
+            -DNFX_ENABLE_SIMD=OFF `
+            -DNFX_ENABLE_LOGGING=OFF `
+            -DNFX_ENABLE_ABSEIL=OFF
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -C Release
+
+  # Linux with full features (io_uring, SIMD, Abseil)
+  linux-full:
+    runs-on: ubuntu-24.04
+    name: Linux Full Features
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build liburing-dev
+
+      - name: Configure
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DNFX_BUILD_TESTS=ON \
+            -DNFX_BUILD_BENCHMARKS=ON \
+            -DNFX_ENABLE_SIMD=ON \
+            -DNFX_ENABLE_IO_URING=ON \
+            -DNFX_ENABLE_LOGGING=ON \
+            -DNFX_ENABLE_ABSEIL=ON
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

@@ -509,8 +509,8 @@ int main() {
 
     // Create separate contexts for each transport
     IoUringContext ctx_enabled, ctx_disabled;
-    ctx_enabled.init();
-    ctx_disabled.init();
+    (void)ctx_enabled.init();
+    (void)ctx_disabled.init();
 
     IoUringTransport transport_enabled(ctx_enabled, config_enabled);
     IoUringTransport transport_disabled(ctx_disabled, config_disabled);
