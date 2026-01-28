@@ -15,11 +15,12 @@
 #include <cstdio>
 #include <algorithm>
 
-// Platform-specific poll header
+// Platform-specific headers
 #if NFX_PLATFORM_POSIX
     #include <poll.h>
 #elif NFX_PLATFORM_WINDOWS
     // Windows uses WSAPoll from winsock2.h (already included via socket_types.hpp)
+    #include "nexusfix/transport/winsock_init.hpp"
 #endif
 
 namespace nfx {
@@ -67,6 +68,12 @@ public:
 
     /// Create socket
     [[nodiscard]] TransportResult<void> create() noexcept {
+#if NFX_PLATFORM_WINDOWS
+        // Ensure Winsock is initialized before any socket operations
+        if (!WinsockInit::ensure()) {
+            return std::unexpected{WinsockInit::make_init_error()};
+        }
+#endif
         fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
         if (!is_valid_socket(fd_)) {
             return std::unexpected{make_socket_error()};
@@ -368,6 +375,12 @@ public:
         uint16_t port,
         int backlog = 128) noexcept
     {
+#if NFX_PLATFORM_WINDOWS
+        // Ensure Winsock is initialized before any socket operations
+        if (!WinsockInit::ensure()) {
+            return std::unexpected{WinsockInit::make_init_error()};
+        }
+#endif
         fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
         if (!is_valid_socket(fd_)) {
             return std::unexpected{make_socket_error()};

@@ -232,8 +232,8 @@ TEST_CASE("MonotonicPool", "[memory][pmr]") {
         auto alloc = pool.allocator();
 
         // Allocate some memory
-        alloc.allocate(1000);
-        alloc.allocate(1000);
+        (void)alloc.allocate(1000);
+        (void)alloc.allocate(1000);
 
         // Reset should allow reuse
         pool.reset();

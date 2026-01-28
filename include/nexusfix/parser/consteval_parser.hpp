@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "nexusfix/platform/platform.hpp"
 #include "nexusfix/types/tag.hpp"
 #include "nexusfix/types/error.hpp"
 #include "nexusfix/parser/field_view.hpp"
@@ -250,7 +251,7 @@ struct HeaderParseResult {
 };
 
 /// Parse FIX message header (constexpr-capable)
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 constexpr HeaderParseResult parse_header(
     std::span<const char> data) noexcept
 {
@@ -366,7 +367,7 @@ constexpr HeaderParseResult parse_header(
 // ============================================================================
 
 /// Validate FIX checksum
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 constexpr ParseError validate_checksum(
     std::span<const char> data) noexcept
 {

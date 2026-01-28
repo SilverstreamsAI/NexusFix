@@ -9,13 +9,13 @@
     - Logging and metrics
 
     Architecture:
-    ┌─────────────────┐    SPSC Queue    ┌─────────────────────┐
-    │  Hot Path       │ ──────────────>  │  Background Thread  │
-    │  ~20ns          │   (lock-free)    │  (expensive work)   │
-    │  - timestamp    │                  │  - full parse       │
-    │  - memcpy       │                  │  - persist          │
-    │  - publish      │                  │  - callbacks        │
-    └─────────────────┘                  └─────────────────────┘
+    +------------------+    SPSC Queue    +----------------------+
+    |  Hot Path        | --------------->  |  Background Thread   |
+    |  ~20ns           |   (lock-free)    |  (expensive work)    |
+    |  - timestamp     |                  |  - full parse        |
+    |  - memcpy        |                  |  - persist           |
+    |  - publish       |                  |  - callbacks         |
+    +------------------+                  +----------------------+
 
     Usage:
         DeferredProcessor<FIXMessage, 65536> processor;
@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "nexusfix/platform/platform.hpp"
 #include "nexusfix/memory/spsc_queue.hpp"
 
 #include <thread>
@@ -156,7 +157,7 @@ public:
     /// @param data Message data to defer
     /// @param timestamp Optional RDTSC timestamp (0 = auto)
     /// @return true if submitted, false if queue full
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool submit(std::span<const char> data, uint64_t timestamp = 0) noexcept {
         if (timestamp == 0) {
             timestamp = rdtsc();
@@ -169,7 +170,7 @@ public:
     }
 
     /// Submit with spin wait (guaranteed delivery, may block)
-    [[gnu::hot]]
+    NFX_HOT
     void submit_blocking(std::span<const char> data, uint64_t timestamp = 0) noexcept {
         if (timestamp == 0) {
             timestamp = rdtsc();
@@ -183,7 +184,7 @@ public:
 
     /// Get slot for in-place construction (advanced usage)
     /// Must call publish() after filling the slot
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     BufferType* try_reserve_slot() noexcept {
         // For in-place construction, caller fills buffer directly
         // This avoids one copy on hot path
@@ -191,7 +192,7 @@ public:
     }
 
     /// Publish reserved slot
-    [[gnu::hot]]
+    NFX_HOT
     bool publish_slot() noexcept {
         if (!reserved_slot_.has_value()) {
             return false;
@@ -356,7 +357,7 @@ public:
     }
 
     /// Schedule callback for deferred execution
-    [[nodiscard]] [[gnu::hot]]
+    [[nodiscard]] NFX_HOT
     bool schedule(Callback&& cb) noexcept {
         CallbackItem item{std::forward<Callback>(cb), rdtsc()};
         return queue_.try_push(std::move(item));

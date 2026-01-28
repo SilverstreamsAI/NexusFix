@@ -205,9 +205,9 @@ int main() {
     // Warmup
     for (int i = 0; i < WARMUP_ITERATIONS; ++i) {
         for (int j = 0; j < 8; ++j) {
-            batch.queue_nop();
+            (void)batch.queue_nop();
         }
-        batch.submit();
+        (void)batch.submit();
 
         for (int j = 0; j < 8; ++j) {
             struct io_uring_cqe* cqe;
@@ -224,9 +224,9 @@ int main() {
 
         // Queue 8 operations
         for (int j = 0; j < 8; ++j) {
-            batch.queue_nop();
+            (void)batch.queue_nop();
         }
-        batch.submit();
+        (void)batch.submit();
 
         uint64_t end = rdtsc();
 
