@@ -6,8 +6,8 @@
 #include "nexusfix/types/error.hpp"
 
 using namespace nfx;
-using namespace nfx::tag;
 using namespace nfx::literals;
+// Note: NOT using namespace nfx::tag to avoid conflicts with nfx::OrdStatus, nfx::Side, etc.
 
 // ============================================================================
 // Tag Tests
@@ -15,32 +15,32 @@ using namespace nfx::literals;
 
 TEST_CASE("Tag compile-time values", "[types][tag]") {
     SECTION("Standard header tags") {
-        static_assert(BeginString::value == 8);
-        static_assert(BodyLength::value == 9);
-        static_assert(MsgType::value == 35);
-        static_assert(SenderCompID::value == 49);
-        static_assert(TargetCompID::value == 56);
-        static_assert(MsgSeqNum::value == 34);
-        static_assert(SendingTime::value == 52);
-        static_assert(CheckSum::value == 10);
+        static_assert(tag::BeginString::value == 8);
+        static_assert(tag::BodyLength::value == 9);
+        static_assert(tag::MsgType::value == 35);
+        static_assert(tag::SenderCompID::value == 49);
+        static_assert(tag::TargetCompID::value == 56);
+        static_assert(tag::MsgSeqNum::value == 34);
+        static_assert(tag::SendingTime::value == 52);
+        static_assert(tag::CheckSum::value == 10);
 
-        REQUIRE(tag_value<BeginString>() == 8);
-        REQUIRE(tag_value<MsgType>() == 35);
+        REQUIRE(tag::tag_value<tag::BeginString>() == 8);
+        REQUIRE(tag::tag_value<tag::MsgType>() == 35);
     }
 
     SECTION("Execution report tags") {
-        static_assert(OrderID::value == 37);
-        static_assert(ExecID::value == 17);
-        static_assert(ExecType::value == 150);
-        static_assert(OrdStatus::value == 39);
-        static_assert(LeavesQty::value == 151);
-        static_assert(CumQty::value == 14);
-        static_assert(AvgPx::value == 6);
+        static_assert(tag::OrderID::value == 37);
+        static_assert(tag::ExecID::value == 17);
+        static_assert(tag::ExecType::value == 150);
+        static_assert(tag::OrdStatus::value == 39);
+        static_assert(tag::LeavesQty::value == 151);
+        static_assert(tag::CumQty::value == 14);
+        static_assert(tag::AvgPx::value == 6);
     }
 
     SECTION("Tag comparison") {
-        static_assert(same_tag<BeginString, BeginString>());
-        static_assert(!same_tag<BeginString, BodyLength>());
+        static_assert(tag::same_tag<tag::BeginString, tag::BeginString>());
+        static_assert(!tag::same_tag<tag::BeginString, tag::BodyLength>());
     }
 }
 
@@ -158,6 +158,7 @@ TEST_CASE("SeqNum operations", "[types][seqnum]") {
 // ============================================================================
 
 TEST_CASE("Side enum", "[types][enums]") {
+    using nfx::Side;  // Disambiguate from nfx::tag::Side
     REQUIRE(is_buy_side(Side::Buy));
     REQUIRE(is_buy_side(Side::BuyMinus));
     REQUIRE(!is_buy_side(Side::Sell));
@@ -168,6 +169,7 @@ TEST_CASE("Side enum", "[types][enums]") {
 }
 
 TEST_CASE("OrdStatus enum", "[types][enums]") {
+    using nfx::OrdStatus;  // Disambiguate from nfx::tag::OrdStatus
     REQUIRE(is_terminal_status(OrdStatus::Filled));
     REQUIRE(is_terminal_status(OrdStatus::Canceled));
     REQUIRE(is_terminal_status(OrdStatus::Rejected));

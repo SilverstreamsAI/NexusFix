@@ -7,6 +7,7 @@
 #include <optional>
 #include <limits>
 
+#include "nexusfix/platform/platform.hpp"
 #include "nexusfix/types/tag.hpp"
 #include "nexusfix/types/field_types.hpp"
 #include "nexusfix/interfaces/i_message.hpp"
@@ -159,7 +160,7 @@ public:
         : data_{data}, pos_{0} {}
 
     /// Get next field (returns invalid FieldView if no more fields)
-    [[nodiscard]] [[gnu::hot]] constexpr FieldView next() noexcept {
+    [[nodiscard]] NFX_HOT constexpr FieldView next() noexcept {
         if (pos_ >= data_.size()) [[unlikely]] {
             return FieldView{};
         }
@@ -245,7 +246,7 @@ public:
     }
 
     /// Get field value (O(1))
-    [[nodiscard]] [[gnu::hot]] constexpr FieldView get(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT constexpr FieldView get(int tag) const noexcept {
         if (tag > 0 && static_cast<size_t>(tag) < MaxTag) [[likely]] {
             return entries_[tag];
         }
@@ -253,23 +254,23 @@ public:
     }
 
     /// Check if tag exists
-    [[nodiscard]] [[gnu::hot]] constexpr bool has(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT constexpr bool has(int tag) const noexcept {
         return tag > 0 && static_cast<size_t>(tag) < MaxTag &&
                entries_[tag].is_valid();
     }
 
     /// Get string value for tag
-    [[nodiscard]] [[gnu::hot]] constexpr std::string_view get_string(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT constexpr std::string_view get_string(int tag) const noexcept {
         return get(tag).as_string();
     }
 
     /// Get int value for tag
-    [[nodiscard]] [[gnu::hot]] constexpr std::optional<int64_t> get_int(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT constexpr std::optional<int64_t> get_int(int tag) const noexcept {
         return get(tag).as_int();
     }
 
     /// Get char value for tag
-    [[nodiscard]] [[gnu::hot]] constexpr char get_char(int tag) const noexcept {
+    [[nodiscard]] NFX_HOT constexpr char get_char(int tag) const noexcept {
         return get(tag).as_char();
     }
 
@@ -293,7 +294,7 @@ static_assert(alignof(FieldTable<512>) >= CACHE_LINE_SIZE,
 // ============================================================================
 
 /// Parse single field at specific position
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 constexpr FieldView parse_field_at(
     std::span<const char> data,
     size_t pos) noexcept
@@ -304,7 +305,7 @@ constexpr FieldView parse_field_at(
 }
 
 /// Find field by tag (linear scan)
-[[nodiscard]] [[gnu::hot]]
+[[nodiscard]] NFX_HOT
 constexpr FieldView find_field(
     std::span<const char> data,
     int target_tag) noexcept
