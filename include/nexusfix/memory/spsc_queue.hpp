@@ -17,6 +17,7 @@
 #include <atomic>
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <type_traits>
 #include <new>
@@ -121,7 +122,7 @@ public:
             }
         }
 
-        new (&buffer_[head]) T(std::forward<Args>(args)...);
+        std::construct_at(&buffer_[head], std::forward<Args>(args)...);
         head_.store(next_head, std::memory_order_release);
         return true;
     }
