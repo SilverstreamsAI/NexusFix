@@ -106,6 +106,16 @@ set_target_properties(simd_checksum_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# Highway vs Native comparison benchmark
+if(NFX_ENABLE_HIGHWAY)
+    add_executable(highway_comparison_bench highway_comparison_bench.cpp)
+    target_link_libraries(highway_comparison_bench PRIVATE nexusfix pthread)
+    target_compile_options(highway_comparison_bench PRIVATE -O3 -march=native)
+    set_target_properties(highway_comparison_bench PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+    )
+endif()
+
 # Batch submit benchmark (io_uring)
 add_executable(batch_submit_bench batch_submit_bench.cpp)
 target_link_libraries(batch_submit_bench PRIVATE nexusfix pthread uring)

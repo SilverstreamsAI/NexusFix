@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Options
 option(NFX_ENABLE_SIMD "Enable SIMD optimizations (AVX2)" ON)
 option(NFX_ENABLE_AVX512 "Enable AVX-512 optimizations (requires CPU support)" OFF)
+option(NFX_ENABLE_HIGHWAY "Enable Google Highway for portable SIMD" ON)
 option(NFX_ENABLE_IO_URING "Enable io_uring transport (Linux only)" OFF)
 option(NFX_ENABLE_LOGGING "Enable Quill high-performance logging" ON)
 option(NFX_ENABLE_ABSEIL "Enable Abseil for Swiss Table hash maps (~3x faster)" ON)
@@ -42,6 +43,21 @@ if(NFX_ENABLE_ABSEIL)
     set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
     set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(abseil-cpp)
+endif()
+
+# Google Highway - Portable SIMD library (supports x86, ARM, RISC-V, WASM)
+if(NFX_ENABLE_HIGHWAY)
+    FetchContent_Declare(
+        highway
+        GIT_REPOSITORY https://github.com/google/highway.git
+        GIT_TAG 1.2.0
+        GIT_SHALLOW TRUE
+    )
+    set(HWY_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+    set(HWY_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(HWY_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(highway)
+    message(STATUS "Google Highway enabled for portable SIMD")
 endif()
 
 # Platform-specific compiler flags
@@ -173,6 +189,12 @@ if(NFX_ENABLE_ABSEIL)
     )
     target_compile_definitions(nexusfix INTERFACE NFX_HAS_ABSEIL=1)
     message(STATUS "Abseil Swiss Tables enabled (~3x faster hash map lookups)")
+endif()
+
+# Highway support (portable SIMD)
+if(NFX_ENABLE_HIGHWAY)
+    target_link_libraries(nexusfix INTERFACE hwy)
+    target_compile_definitions(nexusfix INTERFACE NFX_HAS_HIGHWAY=1)
 endif()
 
 # io_uring support (Linux only)
