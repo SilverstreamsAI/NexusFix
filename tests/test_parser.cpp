@@ -19,22 +19,22 @@ namespace {
 
 // Sample ExecutionReport message (FIX 4.4)
 // 8=FIX.4.4|9=176|35=8|49=SENDER|56=TARGET|34=1|52=20231215-10:30:00.000|
-// 37=ORDER123|17=EXEC456|150=0|39=0|55=AAPL|54=1|38=100|44=150.50|151=100|14=0|6=0|10=123|
+// 37=ORDER123|17=EXEC456|150=0|39=0|55=AAPL|54=1|38=100|44=150.50|151=100|14=0|6=0|10=004|
 const std::string EXEC_REPORT =
     "8=FIX.4.4\x01" "9=176\x01" "35=8\x01" "49=SENDER\x01" "56=TARGET\x01"
     "34=1\x01" "52=20231215-10:30:00.000\x01" "37=ORDER123\x01" "17=EXEC456\x01"
     "150=0\x01" "39=0\x01" "55=AAPL\x01" "54=1\x01" "38=100\x01" "44=150.50\x01"
-    "151=100\x01" "14=0\x01" "6=0\x01" "10=123\x01";
+    "151=100\x01" "14=0\x01" "6=0\x01" "10=004\x01";
 
 // Simple Logon message
 const std::string LOGON =
     "8=FIX.4.4\x01" "9=70\x01" "35=A\x01" "49=CLIENT\x01" "56=SERVER\x01"
-    "34=1\x01" "52=20231215-10:30:00\x01" "98=0\x01" "108=30\x01" "10=000\x01";
+    "34=1\x01" "52=20231215-10:30:00\x01" "98=0\x01" "108=30\x01" "10=185\x01";
 
 // Heartbeat message
 const std::string HEARTBEAT =
     "8=FIX.4.4\x01" "9=55\x01" "35=0\x01" "49=SENDER\x01" "56=TARGET\x01"
-    "34=5\x01" "52=20231215-10:30:00\x01" "10=000\x01";
+    "34=5\x01" "52=20231215-10:30:00\x01" "10=136\x01";
 
 }  // namespace
 
@@ -247,9 +247,7 @@ TEST_CASE("Header parsing", "[parser][consteval]") {
 // Runtime Parser Tests
 // ============================================================================
 
-// TODO(TICKET-011): Fix ParsedMessage and IndexedParser tests
-// These tests fail due to parser API changes that need investigation
-TEST_CASE("ParsedMessage", "[parser][runtime][!mayfail]") {
+TEST_CASE("ParsedMessage", "[parser][runtime]") {
     SECTION("Parse execution report") {
         auto result = ParsedMessage::parse(
             std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()});
@@ -284,7 +282,7 @@ TEST_CASE("ParsedMessage", "[parser][runtime][!mayfail]") {
     }
 }
 
-TEST_CASE("IndexedParser O(1) lookup", "[parser][runtime][!mayfail]") {
+TEST_CASE("IndexedParser O(1) lookup", "[parser][runtime]") {
     auto result = IndexedParser::parse(
         std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()});
 

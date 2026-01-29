@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <array>
+#include <memory>  // std::assume_aligned
 
 #include "nexusfix/platform/platform.hpp"
 #include "nexusfix/interfaces/i_message.hpp"
@@ -182,11 +183,13 @@ inline size_t find_soh_avx2(
         ++i;
     }
 
-    // SIMD loop
+    // SIMD loop with alignment hint for compiler optimization
     const size_t simd_end = data.size() & ~(AVX2_REGISTER_SIZE - 1);
     while (i < simd_end) [[likely]] {
+        // Hint to compiler that pointer is 32-byte aligned
+        const char* aligned_ptr = std::assume_aligned<AVX2_REGISTER_SIZE>(ptr + i);
         __m256i chunk = _mm256_load_si256(
-            reinterpret_cast<const __m256i*>(ptr + i));
+            reinterpret_cast<const __m256i*>(aligned_ptr));
         __m256i cmp = _mm256_cmpeq_epi8(chunk, soh_vec);
         uint32_t mask = static_cast<uint32_t>(_mm256_movemask_epi8(cmp));
 
@@ -223,11 +226,13 @@ inline size_t find_equals_avx2(
         ++i;
     }
 
-    // SIMD loop
+    // SIMD loop with alignment hint for compiler optimization
     const size_t simd_end = data.size() & ~(AVX2_REGISTER_SIZE - 1);
     while (i < simd_end) [[likely]] {
+        // Hint to compiler that pointer is 32-byte aligned
+        const char* aligned_ptr = std::assume_aligned<AVX2_REGISTER_SIZE>(ptr + i);
         __m256i chunk = _mm256_load_si256(
-            reinterpret_cast<const __m256i*>(ptr + i));
+            reinterpret_cast<const __m256i*>(aligned_ptr));
         __m256i cmp = _mm256_cmpeq_epi8(chunk, eq_vec);
         uint32_t mask = static_cast<uint32_t>(_mm256_movemask_epi8(cmp));
 
@@ -334,11 +339,13 @@ inline size_t find_soh_avx512(
         ++i;
     }
 
-    // SIMD loop (64 bytes per iteration)
+    // SIMD loop (64 bytes per iteration) with alignment hint
     const size_t simd_end = data.size() & ~(AVX512_REGISTER_SIZE - 1);
     while (i < simd_end) [[likely]] {
+        // Hint to compiler that pointer is 64-byte aligned
+        const char* aligned_ptr = std::assume_aligned<AVX512_REGISTER_SIZE>(ptr + i);
         __m512i chunk = _mm512_load_si512(
-            reinterpret_cast<const __m512i*>(ptr + i));
+            reinterpret_cast<const __m512i*>(aligned_ptr));
         __mmask64 mask = _mm512_cmpeq_epi8_mask(chunk, soh_vec);
 
         if (mask != 0) [[unlikely]] {
@@ -374,11 +381,13 @@ inline size_t find_equals_avx512(
         ++i;
     }
 
-    // SIMD loop
+    // SIMD loop with alignment hint
     const size_t simd_end = data.size() & ~(AVX512_REGISTER_SIZE - 1);
     while (i < simd_end) [[likely]] {
+        // Hint to compiler that pointer is 64-byte aligned
+        const char* aligned_ptr = std::assume_aligned<AVX512_REGISTER_SIZE>(ptr + i);
         __m512i chunk = _mm512_load_si512(
-            reinterpret_cast<const __m512i*>(ptr + i));
+            reinterpret_cast<const __m512i*>(aligned_ptr));
         __mmask64 mask = _mm512_cmpeq_epi8_mask(chunk, eq_vec);
 
         if (mask != 0) [[unlikely]] {

@@ -94,17 +94,16 @@ TEST_CASE("MarketDataRequest Builder - Snapshot only", "[market_data][request]")
 
 // ============================================================================
 // MarketDataSnapshotFullRefresh Tests
-// TODO(TICKET-011): Fix market data parser tests - from_buffer returns error
 // ============================================================================
 
-TEST_CASE("MarketDataSnapshotFullRefresh Parser - Basic snapshot", "[market_data][snapshot][!mayfail]") {
+TEST_CASE("MarketDataSnapshotFullRefresh Parser - Basic snapshot", "[market_data][snapshot]") {
     std::string raw_msg = make_fix_message(
         "8=FIX.4.4|9=150|35=W|49=SERVER|56=CLIENT|34=1|52=20260122-10:00:00.000|"
         "262=MD001|55=AAPL|268=3|"
         "269=0|270=150.25|271=1000|"
         "269=1|270=150.30|271=500|"
         "269=2|270=150.27|271=100|"
-        "10=000|"
+        "10=019|"
     );
 
     auto result = MarketDataSnapshotFullRefresh::from_buffer(
@@ -120,13 +119,13 @@ TEST_CASE("MarketDataSnapshotFullRefresh Parser - Basic snapshot", "[market_data
     REQUIRE(msg.entry_count() == 3);
 }
 
-TEST_CASE("MarketDataSnapshotFullRefresh Parser - Iterate entries", "[market_data][snapshot][iterator][!mayfail]") {
+TEST_CASE("MarketDataSnapshotFullRefresh Parser - Iterate entries", "[market_data][snapshot][iterator]") {
     std::string raw_msg = make_fix_message(
         "8=FIX.4.4|9=180|35=W|49=SERVER|56=CLIENT|34=1|52=20260122-10:00:00.000|"
         "262=MD002|55=GOOGL|268=2|"
         "269=0|270=2800.50|271=200|290=1|"
         "269=1|270=2801.00|271=150|290=1|"
-        "10=000|"
+        "10=060|"
     );
 
     auto result = MarketDataSnapshotFullRefresh::from_buffer(
@@ -161,13 +160,13 @@ TEST_CASE("MarketDataSnapshotFullRefresh Parser - Iterate entries", "[market_dat
 // MarketDataIncrementalRefresh Tests
 // ============================================================================
 
-TEST_CASE("MarketDataIncrementalRefresh Parser - Basic update", "[market_data][incremental][!mayfail]") {
+TEST_CASE("MarketDataIncrementalRefresh Parser - Basic update", "[market_data][incremental]") {
     std::string raw_msg = make_fix_message(
         "8=FIX.4.4|9=120|35=X|49=SERVER|56=CLIENT|34=2|52=20260122-10:00:01.000|"
         "262=MD001|268=2|"
         "279=0|269=0|55=AAPL|270=150.30|271=1200|"
         "279=1|269=1|55=AAPL|270=150.35|271=400|"
-        "10=000|"
+        "10=125|"
     );
 
     auto result = MarketDataIncrementalRefresh::from_buffer(
@@ -182,14 +181,14 @@ TEST_CASE("MarketDataIncrementalRefresh Parser - Basic update", "[market_data][i
     REQUIRE(msg.entry_count() == 2);
 }
 
-TEST_CASE("MarketDataIncrementalRefresh Parser - Update actions", "[market_data][incremental][actions][!mayfail]") {
+TEST_CASE("MarketDataIncrementalRefresh Parser - Update actions", "[market_data][incremental][actions]") {
     std::string raw_msg = make_fix_message(
         "8=FIX.4.4|9=150|35=X|49=SERVER|56=CLIENT|34=3|52=20260122-10:00:02.000|"
         "268=3|"
         "279=0|269=0|55=MSFT|270=400.00|271=100|"
         "279=1|269=0|55=MSFT|270=399.95|271=150|"
         "279=2|269=1|55=MSFT|270=400.10|"
-        "10=000|"
+        "10=158|"
     );
 
     auto result = MarketDataIncrementalRefresh::from_buffer(
@@ -225,11 +224,11 @@ TEST_CASE("MarketDataIncrementalRefresh Parser - Update actions", "[market_data]
 // MarketDataRequestReject Tests
 // ============================================================================
 
-TEST_CASE("MarketDataRequestReject Parser - Unknown symbol", "[market_data][reject][!mayfail]") {
+TEST_CASE("MarketDataRequestReject Parser - Unknown symbol", "[market_data][reject]") {
     std::string raw_msg = make_fix_message(
         "8=FIX.4.4|9=100|35=Y|49=SERVER|56=CLIENT|34=1|52=20260122-10:00:00.000|"
         "262=MD001|281=0|58=Symbol not found|"
-        "10=000|"
+        "10=109|"
     );
 
     auto result = MarketDataRequestReject::from_buffer(
@@ -245,11 +244,11 @@ TEST_CASE("MarketDataRequestReject Parser - Unknown symbol", "[market_data][reje
     REQUIRE(msg.rejection_reason_name() == "UnknownSymbol");
 }
 
-TEST_CASE("MarketDataRequestReject Parser - Insufficient permissions", "[market_data][reject][!mayfail]") {
+TEST_CASE("MarketDataRequestReject Parser - Insufficient permissions", "[market_data][reject]") {
     std::string raw_msg = make_fix_message(
         "8=FIX.4.4|9=90|35=Y|49=SERVER|56=CLIENT|34=2|52=20260122-10:00:00.000|"
         "262=MD002|281=2|58=Not authorized for this symbol|"
-        "10=000|"
+        "10=171|"
     );
 
     auto result = MarketDataRequestReject::from_buffer(
