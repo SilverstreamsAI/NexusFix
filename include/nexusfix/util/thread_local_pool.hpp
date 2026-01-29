@@ -18,6 +18,7 @@
 #include <array>
 #include <cstdint>
 #include <cstddef>
+#include <memory>
 #include <new>
 #include <type_traits>
 #include <utility>
@@ -91,11 +92,12 @@ public:
         }
 
         // Reset object to default state (optional, can be disabled for perf)
+        // Use std::destroy_at + std::construct_at for type-safe reconstruction
         if constexpr (std::is_trivially_destructible_v<T>) {
             // Skip reset for trivial types
         } else {
-            obj->~T();
-            new (obj) T{};
+            std::destroy_at(obj);
+            std::construct_at(obj);
         }
 
         free_stack_[free_count_] = static_cast<uint16_t>(idx);
