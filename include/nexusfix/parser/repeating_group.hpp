@@ -260,8 +260,13 @@ class MDEntryIterator {
 public:
     MDEntryIterator() noexcept = default;
 
-    explicit MDEntryIterator(std::span<const char> data, size_t count) noexcept
-        : iter_{data, tag::MDEntryType::value, count}
+    /// Constructor with custom delimiter tag
+    /// @param data Message data containing the repeating group
+    /// @param count Number of entries in the group
+    /// @param delimiter_tag First tag of each entry (269 for snapshot, 279 for incremental)
+    explicit MDEntryIterator(std::span<const char> data, size_t count,
+                             int delimiter_tag = tag::MDEntryType::value) noexcept
+        : iter_{data, delimiter_tag, count}
     {}
 
     [[nodiscard]] bool has_next() const noexcept {

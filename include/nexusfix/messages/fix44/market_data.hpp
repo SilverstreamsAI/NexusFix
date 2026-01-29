@@ -284,8 +284,9 @@ struct MarketDataIncrementalRefresh {
     [[nodiscard]] constexpr std::string_view sending_time() const noexcept { return header.sending_time; }
 
     /// Get iterator over MDEntry repeating group (with update actions)
+    /// Note: Incremental refresh uses MDUpdateAction (279) as delimiter, not MDEntryType (269)
     [[nodiscard]] parser::MDEntryIterator entries() const noexcept {
-        return parser::MDEntryIterator{raw_data, no_md_entries};
+        return parser::MDEntryIterator{raw_data, no_md_entries, tag::MDUpdateAction::value};
     }
 
     /// Get number of entries
