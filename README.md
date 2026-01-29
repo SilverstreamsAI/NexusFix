@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/C%2B%2B-23-blue.svg" alt="C++23">
   <img src="https://img.shields.io/badge/Library-Header--Only-blue.svg" alt="Header-Only">
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License">
-  <img src="https://img.shields.io/badge/Platform-Linux-lightgrey.svg" alt="Linux">
+  <img src="https://img.shields.io/badge/Platform-Linux%20|%20macOS%20|%20Windows-lightgrey.svg" alt="Cross-Platform">
   <img src="https://img.shields.io/badge/Speed-3x%20QuickFIX-orange.svg" alt="3x Faster">
   <img src="https://img.shields.io/badge/Allocations-Zero%20on%20Hot%20Path-brightgreen.svg" alt="Zero Allocation">
 </p>
@@ -341,9 +341,13 @@ nexusfix/
 ├── include/nexusfix/
 │   ├── parser/           # Zero-copy FIX parser (SIMD)
 │   ├── session/          # Session state machine
-│   ├── transport/        # TCP / io_uring transport
+│   ├── transport/        # TCP / io_uring / Winsock transport
+│   ├── platform/         # Cross-platform abstraction
 │   ├── types/            # Strong types (Price, Qty, Side)
 │   ├── memory/           # PMR buffer pools
+│   ├── store/            # Message store (PMR-optimized)
+│   ├── serializer/       # Message serialization
+│   ├── util/             # Utilities (diagnostics, formatting)
 │   ├── messages/fix44/   # FIX 4.4 message builders
 │   └── interfaces/       # Concepts and interfaces
 ├── benchmarks/           # Performance benchmarks
