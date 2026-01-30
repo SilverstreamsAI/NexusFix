@@ -138,6 +138,14 @@ set_target_properties(sbe_benchmark PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# Phase 2 utilities benchmark (branchless, string hash, seqlock, object pool)
+add_executable(phase2_utils_bench phase2_utils_bench.cpp)
+target_link_libraries(phase2_utils_bench PRIVATE nexusfix pthread)
+target_compile_options(phase2_utils_bench PRIVATE -O3 -march=native -Wno-interference-size)
+set_target_properties(phase2_utils_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # Optimization flags for benchmarks
 target_compile_options(parse_benchmark PRIVATE -O3 -march=native)
 target_compile_options(session_benchmark PRIVATE -O3 -march=native)
