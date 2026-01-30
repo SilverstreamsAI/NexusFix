@@ -130,6 +130,14 @@ set_target_properties(mpsc_queue_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# SBE binary encoding benchmark (SBE vs FIX text parsing)
+add_executable(sbe_benchmark sbe_benchmark.cpp)
+target_link_libraries(sbe_benchmark PRIVATE nexusfix pthread)
+target_compile_options(sbe_benchmark PRIVATE -O3 -march=native)
+set_target_properties(sbe_benchmark PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # Optimization flags for benchmarks
 target_compile_options(parse_benchmark PRIVATE -O3 -march=native)
 target_compile_options(session_benchmark PRIVATE -O3 -march=native)
