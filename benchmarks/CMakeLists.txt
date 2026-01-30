@@ -138,6 +138,16 @@ set_target_properties(sbe_benchmark PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# Aeron IPC benchmark (optional)
+if(NFX_ENABLE_AERON)
+    add_executable(aeron_ipc_bench aeron_ipc_bench.cpp)
+    target_link_libraries(aeron_ipc_bench PRIVATE nexusfix aeron_client aeron_driver pthread)
+    target_compile_options(aeron_ipc_bench PRIVATE -O3 -march=native -Wno-error)
+    set_target_properties(aeron_ipc_bench PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+    )
+endif()
+
 # Optimization flags for benchmarks
 target_compile_options(parse_benchmark PRIVATE -O3 -march=native)
 target_compile_options(session_benchmark PRIVATE -O3 -march=native)

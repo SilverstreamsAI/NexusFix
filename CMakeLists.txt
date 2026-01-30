@@ -15,6 +15,7 @@ option(NFX_ENABLE_ABSEIL "Enable Abseil for Swiss Table hash maps (~3x faster)" 
 option(NFX_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(NFX_BUILD_TESTS "Build tests" ON)
 option(NFX_BUILD_EXAMPLES "Build examples" ON)
+option(NFX_ENABLE_AERON "Enable Aeron high-performance messaging" OFF)
 
 # Dependencies via FetchContent
 include(FetchContent)
@@ -42,6 +43,21 @@ if(NFX_ENABLE_ABSEIL)
     set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
     set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(abseil-cpp)
+endif()
+
+# Aeron - High-performance messaging (IPC + UDP)
+if(NFX_ENABLE_AERON)
+    FetchContent_Declare(
+        aeron
+        GIT_REPOSITORY https://github.com/real-logic/aeron.git
+        GIT_TAG 1.46.7
+        GIT_SHALLOW TRUE
+    )
+    set(AERON_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
+    set(BUILD_AERON_ARCHIVE OFF CACHE BOOL "" FORCE)
+    set(C_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
+    set(CXX_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(aeron)
 endif()
 
 # Platform-specific compiler flags
@@ -173,6 +189,13 @@ if(NFX_ENABLE_ABSEIL)
     )
     target_compile_definitions(nexusfix INTERFACE NFX_HAS_ABSEIL=1)
     message(STATUS "Abseil Swiss Tables enabled (~3x faster hash map lookups)")
+endif()
+
+# Aeron support
+if(NFX_ENABLE_AERON)
+    target_link_libraries(nexusfix INTERFACE aeron_client)
+    target_compile_definitions(nexusfix INTERFACE NFX_HAS_AERON=1)
+    message(STATUS "Aeron messaging enabled")
 endif()
 
 # io_uring support (Linux only)
