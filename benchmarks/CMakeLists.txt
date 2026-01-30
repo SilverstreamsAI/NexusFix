@@ -122,6 +122,14 @@ set_target_properties(io_uring_transport_integration_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# MPSC queue benchmark (Disruptor-pattern multi-producer single-consumer)
+add_executable(mpsc_queue_bench mpsc_queue_bench.cpp)
+target_link_libraries(mpsc_queue_bench PRIVATE nexusfix pthread)
+target_compile_options(mpsc_queue_bench PRIVATE -O3 -march=native -Wno-interference-size)
+set_target_properties(mpsc_queue_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # Optimization flags for benchmarks
 target_compile_options(parse_benchmark PRIVATE -O3 -march=native)
 target_compile_options(session_benchmark PRIVATE -O3 -march=native)
