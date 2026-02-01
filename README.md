@@ -60,6 +60,7 @@ Tested on Linux with GCC 13.3, 100,000 iterations:
 | Field Lookup | O(log n) `std::map` | O(1) direct array indexing |
 | Parsing | Byte-by-byte scanning | AVX2 SIMD vectorized |
 | Field Offsets | Runtime calculation | `consteval` compile-time |
+| Enum/Type Conversion | Runtime switch chains (~300 branches) | 22 compile-time lookup tables (55-97% faster) |
 | Error Handling | Exceptions | `std::expected` (no throw) |
 
 ### Zero Allocation Proof
@@ -142,7 +143,7 @@ NexusFIX is MIT licensed. We gratefully acknowledge these open source projects:
 
 - **Zero-Copy Parsing** - `std::span<const char>` views into original buffer, no `memcpy`
 - **SIMD Acceleration** - AVX2/AVX-512 instructions for delimiter scanning
-- **Compile-Time Optimization** - `consteval` field offsets, `constexpr` validation
+- **Compile-Time Optimization** - `consteval` field offsets, 22 lookup tables for enum/type conversion, ~300 runtime branches eliminated
 - **O(1) Field Access** - Pre-indexed lookup table by FIX tag number
 - **Zero Heap Allocation** - PMR pools and stack allocation on hot path
 - **Type-Safe API** - Strong types for Price, Quantity, Side, OrdType
