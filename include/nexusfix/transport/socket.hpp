@@ -89,13 +89,56 @@ enum class ConnectionState : uint8_t {
     Error
 };
 
-[[nodiscard]] constexpr std::string_view connection_state_name(ConnectionState state) noexcept {
-    switch (state) {
-        case ConnectionState::Disconnected:   return "Disconnected";
-        case ConnectionState::Connecting:     return "Connecting";
-        case ConnectionState::Connected:      return "Connected";
-        case ConnectionState::Disconnecting:  return "Disconnecting";
-        case ConnectionState::Error:          return "Error";
+// Compile-time ConnectionState metadata
+namespace detail {
+
+template<ConnectionState S>
+struct ConnectionStateInfo {
+    static constexpr std::string_view name = "Unknown";
+};
+
+template<> struct ConnectionStateInfo<ConnectionState::Disconnected> {
+    static constexpr std::string_view name = "Disconnected";
+};
+template<> struct ConnectionStateInfo<ConnectionState::Connecting> {
+    static constexpr std::string_view name = "Connecting";
+};
+template<> struct ConnectionStateInfo<ConnectionState::Connected> {
+    static constexpr std::string_view name = "Connected";
+};
+template<> struct ConnectionStateInfo<ConnectionState::Disconnecting> {
+    static constexpr std::string_view name = "Disconnecting";
+};
+template<> struct ConnectionStateInfo<ConnectionState::Error> {
+    static constexpr std::string_view name = "Error";
+};
+
+// Compact lookup table: values 0-4 (5 entries)
+consteval std::array<std::string_view, 5> create_connection_state_table() {
+    std::array<std::string_view, 5> table{};
+    table[0] = ConnectionStateInfo<ConnectionState::Disconnected>::name;
+    table[1] = ConnectionStateInfo<ConnectionState::Connecting>::name;
+    table[2] = ConnectionStateInfo<ConnectionState::Connected>::name;
+    table[3] = ConnectionStateInfo<ConnectionState::Disconnecting>::name;
+    table[4] = ConnectionStateInfo<ConnectionState::Error>::name;
+    return table;
+}
+
+inline constexpr auto CONNECTION_STATE_TABLE = create_connection_state_table();
+
+} // namespace detail
+
+// Compile-time lookup
+template<ConnectionState S>
+[[nodiscard]] consteval std::string_view connection_state_name() noexcept {
+    return detail::ConnectionStateInfo<S>::name;
+}
+
+// Runtime O(1) lookup
+[[nodiscard]] inline constexpr std::string_view connection_state_name(ConnectionState state) noexcept {
+    const auto idx = static_cast<uint8_t>(state);
+    if (idx < 5) [[likely]] {
+        return detail::CONNECTION_STATE_TABLE[idx];
     }
     return "Unknown";
 }

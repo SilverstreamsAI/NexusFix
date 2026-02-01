@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <expected>
 #include <string_view>
 #include <cstdint>
@@ -39,6 +40,110 @@ enum class ParseErrorCode : uint8_t {
     GarbledMessage
 };
 
+inline constexpr size_t PARSE_ERROR_COUNT = 12;
+
+// ============================================================================
+// Compile-time ParseError Info (TICKET_023)
+// ============================================================================
+
+namespace detail {
+
+template<ParseErrorCode Code>
+struct ParseErrorInfo {
+    static constexpr std::string_view message = "Unknown error";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::None> {
+    static constexpr std::string_view message = "No error";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::BufferTooShort> {
+    static constexpr std::string_view message = "Buffer too short";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::InvalidBeginString> {
+    static constexpr std::string_view message = "Invalid BeginString";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::InvalidBodyLength> {
+    static constexpr std::string_view message = "Invalid BodyLength";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::InvalidChecksum> {
+    static constexpr std::string_view message = "Invalid CheckSum";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::MissingRequiredField> {
+    static constexpr std::string_view message = "Missing required field";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::InvalidFieldFormat> {
+    static constexpr std::string_view message = "Invalid field format";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::InvalidTagNumber> {
+    static constexpr std::string_view message = "Invalid tag number";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::DuplicateTag> {
+    static constexpr std::string_view message = "Duplicate tag";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::UnterminatedField> {
+    static constexpr std::string_view message = "Unterminated field";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::InvalidMsgType> {
+    static constexpr std::string_view message = "Invalid MsgType";
+};
+
+template<> struct ParseErrorInfo<ParseErrorCode::GarbledMessage> {
+    static constexpr std::string_view message = "Garbled message";
+};
+
+/// Generate ParseError lookup table at compile time
+consteval std::array<std::string_view, PARSE_ERROR_COUNT> create_parse_error_table() {
+    std::array<std::string_view, PARSE_ERROR_COUNT> table{};
+    table[0]  = ParseErrorInfo<ParseErrorCode::None>::message;
+    table[1]  = ParseErrorInfo<ParseErrorCode::BufferTooShort>::message;
+    table[2]  = ParseErrorInfo<ParseErrorCode::InvalidBeginString>::message;
+    table[3]  = ParseErrorInfo<ParseErrorCode::InvalidBodyLength>::message;
+    table[4]  = ParseErrorInfo<ParseErrorCode::InvalidChecksum>::message;
+    table[5]  = ParseErrorInfo<ParseErrorCode::MissingRequiredField>::message;
+    table[6]  = ParseErrorInfo<ParseErrorCode::InvalidFieldFormat>::message;
+    table[7]  = ParseErrorInfo<ParseErrorCode::InvalidTagNumber>::message;
+    table[8]  = ParseErrorInfo<ParseErrorCode::DuplicateTag>::message;
+    table[9]  = ParseErrorInfo<ParseErrorCode::UnterminatedField>::message;
+    table[10] = ParseErrorInfo<ParseErrorCode::InvalidMsgType>::message;
+    table[11] = ParseErrorInfo<ParseErrorCode::GarbledMessage>::message;
+    return table;
+}
+
+inline constexpr auto PARSE_ERROR_TABLE = create_parse_error_table();
+
+} // namespace detail
+
+/// Compile-time query (when code is known at compile time)
+template<ParseErrorCode Code>
+[[nodiscard]] consteval std::string_view parse_error_message() noexcept {
+    return detail::ParseErrorInfo<Code>::message;
+}
+
+/// Runtime query using O(1) lookup table
+[[nodiscard]] inline constexpr std::string_view parse_error_message(ParseErrorCode code) noexcept {
+    const auto idx = static_cast<uint8_t>(code);
+    if (idx < detail::PARSE_ERROR_TABLE.size()) [[likely]] {
+        return detail::PARSE_ERROR_TABLE[idx];
+    }
+    return "Unknown error";
+}
+
+// Static assertions for ParseError
+static_assert(detail::ParseErrorInfo<ParseErrorCode::None>::message == "No error");
+static_assert(detail::ParseErrorInfo<ParseErrorCode::InvalidChecksum>::message == "Invalid CheckSum");
+static_assert(detail::PARSE_ERROR_TABLE[0] == "No error");
+static_assert(detail::PARSE_ERROR_TABLE[4] == "Invalid CheckSum");
+
 struct ParseError {
     ParseErrorCode code;
     int tag;           // Offending tag (0 if N/A)
@@ -65,21 +170,7 @@ struct ParseError {
     }
 
     [[nodiscard]] constexpr std::string_view message() const noexcept {
-        switch (code) {
-            case ParseErrorCode::None:               return "No error";
-            case ParseErrorCode::BufferTooShort:     return "Buffer too short";
-            case ParseErrorCode::InvalidBeginString: return "Invalid BeginString";
-            case ParseErrorCode::InvalidBodyLength:  return "Invalid BodyLength";
-            case ParseErrorCode::InvalidChecksum:    return "Invalid CheckSum";
-            case ParseErrorCode::MissingRequiredField: return "Missing required field";
-            case ParseErrorCode::InvalidFieldFormat: return "Invalid field format";
-            case ParseErrorCode::InvalidTagNumber:   return "Invalid tag number";
-            case ParseErrorCode::DuplicateTag:       return "Duplicate tag";
-            case ParseErrorCode::UnterminatedField:  return "Unterminated field";
-            case ParseErrorCode::InvalidMsgType:     return "Invalid MsgType";
-            case ParseErrorCode::GarbledMessage:     return "Garbled message";
-        }
-        return "Unknown error";
+        return parse_error_message(code);
     }
 };
 
@@ -98,6 +189,95 @@ enum class SessionErrorCode : uint8_t {
     InvalidState,
     Disconnected
 };
+
+inline constexpr size_t SESSION_ERROR_COUNT = 9;
+
+// ============================================================================
+// Compile-time SessionError Info (TICKET_023)
+// ============================================================================
+
+namespace detail {
+
+template<SessionErrorCode Code>
+struct SessionErrorInfo {
+    static constexpr std::string_view message = "Unknown error";
+};
+
+template<> struct SessionErrorInfo<SessionErrorCode::None> {
+    static constexpr std::string_view message = "No error";
+};
+
+template<> struct SessionErrorInfo<SessionErrorCode::NotConnected> {
+    static constexpr std::string_view message = "Not connected";
+};
+
+template<> struct SessionErrorInfo<SessionErrorCode::AlreadyConnected> {
+    static constexpr std::string_view message = "Already connected";
+};
+
+template<> struct SessionErrorInfo<SessionErrorCode::LogonRejected> {
+    static constexpr std::string_view message = "Logon rejected";
+};
+
+template<> struct SessionErrorInfo<SessionErrorCode::LogonTimeout> {
+    static constexpr std::string_view message = "Logon timeout";
+};
+
+template<> struct SessionErrorInfo<SessionErrorCode::HeartbeatTimeout> {
+    static constexpr std::string_view message = "Heartbeat timeout";
+};
+
+template<> struct SessionErrorInfo<SessionErrorCode::SequenceGap> {
+    static constexpr std::string_view message = "Sequence gap detected";
+};
+
+template<> struct SessionErrorInfo<SessionErrorCode::InvalidState> {
+    static constexpr std::string_view message = "Invalid session state";
+};
+
+template<> struct SessionErrorInfo<SessionErrorCode::Disconnected> {
+    static constexpr std::string_view message = "Disconnected";
+};
+
+/// Generate SessionError lookup table at compile time
+consteval std::array<std::string_view, SESSION_ERROR_COUNT> create_session_error_table() {
+    std::array<std::string_view, SESSION_ERROR_COUNT> table{};
+    table[0] = SessionErrorInfo<SessionErrorCode::None>::message;
+    table[1] = SessionErrorInfo<SessionErrorCode::NotConnected>::message;
+    table[2] = SessionErrorInfo<SessionErrorCode::AlreadyConnected>::message;
+    table[3] = SessionErrorInfo<SessionErrorCode::LogonRejected>::message;
+    table[4] = SessionErrorInfo<SessionErrorCode::LogonTimeout>::message;
+    table[5] = SessionErrorInfo<SessionErrorCode::HeartbeatTimeout>::message;
+    table[6] = SessionErrorInfo<SessionErrorCode::SequenceGap>::message;
+    table[7] = SessionErrorInfo<SessionErrorCode::InvalidState>::message;
+    table[8] = SessionErrorInfo<SessionErrorCode::Disconnected>::message;
+    return table;
+}
+
+inline constexpr auto SESSION_ERROR_TABLE = create_session_error_table();
+
+} // namespace detail
+
+/// Compile-time query (when code is known at compile time)
+template<SessionErrorCode Code>
+[[nodiscard]] consteval std::string_view session_error_message() noexcept {
+    return detail::SessionErrorInfo<Code>::message;
+}
+
+/// Runtime query using O(1) lookup table
+[[nodiscard]] inline constexpr std::string_view session_error_message(SessionErrorCode code) noexcept {
+    const auto idx = static_cast<uint8_t>(code);
+    if (idx < detail::SESSION_ERROR_TABLE.size()) [[likely]] {
+        return detail::SESSION_ERROR_TABLE[idx];
+    }
+    return "Unknown error";
+}
+
+// Static assertions for SessionError
+static_assert(detail::SessionErrorInfo<SessionErrorCode::None>::message == "No error");
+static_assert(detail::SessionErrorInfo<SessionErrorCode::LogonTimeout>::message == "Logon timeout");
+static_assert(detail::SESSION_ERROR_TABLE[0] == "No error");
+static_assert(detail::SESSION_ERROR_TABLE[4] == "Logon timeout");
 
 struct SessionError {
     SessionErrorCode code;
@@ -118,18 +298,7 @@ struct SessionError {
     }
 
     [[nodiscard]] constexpr std::string_view message() const noexcept {
-        switch (code) {
-            case SessionErrorCode::None:            return "No error";
-            case SessionErrorCode::NotConnected:    return "Not connected";
-            case SessionErrorCode::AlreadyConnected: return "Already connected";
-            case SessionErrorCode::LogonRejected:   return "Logon rejected";
-            case SessionErrorCode::LogonTimeout:    return "Logon timeout";
-            case SessionErrorCode::HeartbeatTimeout: return "Heartbeat timeout";
-            case SessionErrorCode::SequenceGap:     return "Sequence gap detected";
-            case SessionErrorCode::InvalidState:    return "Invalid session state";
-            case SessionErrorCode::Disconnected:    return "Disconnected";
-        }
-        return "Unknown error";
+        return session_error_message(code);
     }
 };
 
@@ -170,6 +339,155 @@ enum class TransportErrorCode : uint8_t {
     KqueueError           // kqueue operation failed (macOS)
 };
 
+inline constexpr size_t TRANSPORT_ERROR_COUNT = 20;
+
+// ============================================================================
+// Compile-time TransportError Info (TICKET_023)
+// ============================================================================
+
+namespace detail {
+
+template<TransportErrorCode Code>
+struct TransportErrorInfo {
+    static constexpr std::string_view message = "Unknown error";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::None> {
+    static constexpr std::string_view message = "No error";
+};
+
+// Connection errors
+template<> struct TransportErrorInfo<TransportErrorCode::ConnectionFailed> {
+    static constexpr std::string_view message = "Connection failed";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::ConnectionClosed> {
+    static constexpr std::string_view message = "Connection closed";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::ConnectionRefused> {
+    static constexpr std::string_view message = "Connection refused";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::ConnectionReset> {
+    static constexpr std::string_view message = "Connection reset by peer";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::ConnectionAborted> {
+    static constexpr std::string_view message = "Connection aborted";
+};
+
+// I/O errors
+template<> struct TransportErrorInfo<TransportErrorCode::ReadError> {
+    static constexpr std::string_view message = "Read error";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::WriteError> {
+    static constexpr std::string_view message = "Write error";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::Timeout> {
+    static constexpr std::string_view message = "Timeout";
+};
+
+// Address errors
+template<> struct TransportErrorInfo<TransportErrorCode::AddressResolutionFailed> {
+    static constexpr std::string_view message = "Address resolution failed";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::NetworkUnreachable> {
+    static constexpr std::string_view message = "Network unreachable";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::HostUnreachable> {
+    static constexpr std::string_view message = "Host unreachable";
+};
+
+// Socket state errors
+template<> struct TransportErrorInfo<TransportErrorCode::SocketError> {
+    static constexpr std::string_view message = "Socket error";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::WouldBlock> {
+    static constexpr std::string_view message = "Operation would block";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::InProgress> {
+    static constexpr std::string_view message = "Operation in progress";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::NotConnected> {
+    static constexpr std::string_view message = "Socket not connected";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::NoBufferSpace> {
+    static constexpr std::string_view message = "No buffer space available";
+};
+
+// Platform-specific errors
+template<> struct TransportErrorInfo<TransportErrorCode::WinsockInitFailed> {
+    static constexpr std::string_view message = "Winsock initialization failed";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::IocpError> {
+    static constexpr std::string_view message = "IOCP operation failed";
+};
+
+template<> struct TransportErrorInfo<TransportErrorCode::KqueueError> {
+    static constexpr std::string_view message = "kqueue operation failed";
+};
+
+/// Generate TransportError lookup table at compile time
+consteval std::array<std::string_view, TRANSPORT_ERROR_COUNT> create_transport_error_table() {
+    std::array<std::string_view, TRANSPORT_ERROR_COUNT> table{};
+    table[0]  = TransportErrorInfo<TransportErrorCode::None>::message;
+    table[1]  = TransportErrorInfo<TransportErrorCode::ConnectionFailed>::message;
+    table[2]  = TransportErrorInfo<TransportErrorCode::ConnectionClosed>::message;
+    table[3]  = TransportErrorInfo<TransportErrorCode::ConnectionRefused>::message;
+    table[4]  = TransportErrorInfo<TransportErrorCode::ConnectionReset>::message;
+    table[5]  = TransportErrorInfo<TransportErrorCode::ConnectionAborted>::message;
+    table[6]  = TransportErrorInfo<TransportErrorCode::ReadError>::message;
+    table[7]  = TransportErrorInfo<TransportErrorCode::WriteError>::message;
+    table[8]  = TransportErrorInfo<TransportErrorCode::Timeout>::message;
+    table[9]  = TransportErrorInfo<TransportErrorCode::AddressResolutionFailed>::message;
+    table[10] = TransportErrorInfo<TransportErrorCode::NetworkUnreachable>::message;
+    table[11] = TransportErrorInfo<TransportErrorCode::HostUnreachable>::message;
+    table[12] = TransportErrorInfo<TransportErrorCode::SocketError>::message;
+    table[13] = TransportErrorInfo<TransportErrorCode::WouldBlock>::message;
+    table[14] = TransportErrorInfo<TransportErrorCode::InProgress>::message;
+    table[15] = TransportErrorInfo<TransportErrorCode::NotConnected>::message;
+    table[16] = TransportErrorInfo<TransportErrorCode::NoBufferSpace>::message;
+    table[17] = TransportErrorInfo<TransportErrorCode::WinsockInitFailed>::message;
+    table[18] = TransportErrorInfo<TransportErrorCode::IocpError>::message;
+    table[19] = TransportErrorInfo<TransportErrorCode::KqueueError>::message;
+    return table;
+}
+
+inline constexpr auto TRANSPORT_ERROR_TABLE = create_transport_error_table();
+
+} // namespace detail
+
+/// Compile-time query (when code is known at compile time)
+template<TransportErrorCode Code>
+[[nodiscard]] consteval std::string_view transport_error_message() noexcept {
+    return detail::TransportErrorInfo<Code>::message;
+}
+
+/// Runtime query using O(1) lookup table
+[[nodiscard]] inline constexpr std::string_view transport_error_message(TransportErrorCode code) noexcept {
+    const auto idx = static_cast<uint8_t>(code);
+    if (idx < detail::TRANSPORT_ERROR_TABLE.size()) [[likely]] {
+        return detail::TRANSPORT_ERROR_TABLE[idx];
+    }
+    return "Unknown error";
+}
+
+// Static assertions for TransportError
+static_assert(detail::TransportErrorInfo<TransportErrorCode::None>::message == "No error");
+static_assert(detail::TransportErrorInfo<TransportErrorCode::Timeout>::message == "Timeout");
+static_assert(detail::TRANSPORT_ERROR_TABLE[0] == "No error");
+static_assert(detail::TRANSPORT_ERROR_TABLE[8] == "Timeout");
+
 struct TransportError {
     TransportErrorCode code;
     int system_errno;  // OS-level errno if applicable
@@ -188,34 +506,7 @@ struct TransportError {
     }
 
     [[nodiscard]] constexpr std::string_view message() const noexcept {
-        switch (code) {
-            case TransportErrorCode::None:           return "No error";
-            // Connection errors
-            case TransportErrorCode::ConnectionFailed: return "Connection failed";
-            case TransportErrorCode::ConnectionClosed: return "Connection closed";
-            case TransportErrorCode::ConnectionRefused: return "Connection refused";
-            case TransportErrorCode::ConnectionReset: return "Connection reset by peer";
-            case TransportErrorCode::ConnectionAborted: return "Connection aborted";
-            // I/O errors
-            case TransportErrorCode::ReadError:      return "Read error";
-            case TransportErrorCode::WriteError:     return "Write error";
-            case TransportErrorCode::Timeout:        return "Timeout";
-            // Address errors
-            case TransportErrorCode::AddressResolutionFailed: return "Address resolution failed";
-            case TransportErrorCode::NetworkUnreachable: return "Network unreachable";
-            case TransportErrorCode::HostUnreachable: return "Host unreachable";
-            // Socket state errors
-            case TransportErrorCode::SocketError:    return "Socket error";
-            case TransportErrorCode::WouldBlock:     return "Operation would block";
-            case TransportErrorCode::InProgress:     return "Operation in progress";
-            case TransportErrorCode::NotConnected:   return "Socket not connected";
-            case TransportErrorCode::NoBufferSpace:  return "No buffer space available";
-            // Platform-specific errors
-            case TransportErrorCode::WinsockInitFailed: return "Winsock initialization failed";
-            case TransportErrorCode::IocpError:      return "IOCP operation failed";
-            case TransportErrorCode::KqueueError:    return "kqueue operation failed";
-        }
-        return "Unknown error";
+        return transport_error_message(code);
     }
 };
 
@@ -235,6 +526,95 @@ enum class ValidationErrorCode : uint8_t {
     QuantityOutOfRange
 };
 
+inline constexpr size_t VALIDATION_ERROR_COUNT = 9;
+
+// ============================================================================
+// Compile-time ValidationError Info (TICKET_023)
+// ============================================================================
+
+namespace detail {
+
+template<ValidationErrorCode Code>
+struct ValidationErrorInfo {
+    static constexpr std::string_view message = "Unknown error";
+};
+
+template<> struct ValidationErrorInfo<ValidationErrorCode::None> {
+    static constexpr std::string_view message = "No error";
+};
+
+template<> struct ValidationErrorInfo<ValidationErrorCode::InvalidPrice> {
+    static constexpr std::string_view message = "Invalid price";
+};
+
+template<> struct ValidationErrorInfo<ValidationErrorCode::InvalidQuantity> {
+    static constexpr std::string_view message = "Invalid quantity";
+};
+
+template<> struct ValidationErrorInfo<ValidationErrorCode::InvalidSide> {
+    static constexpr std::string_view message = "Invalid side";
+};
+
+template<> struct ValidationErrorInfo<ValidationErrorCode::InvalidOrderType> {
+    static constexpr std::string_view message = "Invalid order type";
+};
+
+template<> struct ValidationErrorInfo<ValidationErrorCode::InvalidTimeInForce> {
+    static constexpr std::string_view message = "Invalid time in force";
+};
+
+template<> struct ValidationErrorInfo<ValidationErrorCode::InvalidSymbol> {
+    static constexpr std::string_view message = "Invalid symbol";
+};
+
+template<> struct ValidationErrorInfo<ValidationErrorCode::PriceOutOfRange> {
+    static constexpr std::string_view message = "Price out of range";
+};
+
+template<> struct ValidationErrorInfo<ValidationErrorCode::QuantityOutOfRange> {
+    static constexpr std::string_view message = "Quantity out of range";
+};
+
+/// Generate ValidationError lookup table at compile time
+consteval std::array<std::string_view, VALIDATION_ERROR_COUNT> create_validation_error_table() {
+    std::array<std::string_view, VALIDATION_ERROR_COUNT> table{};
+    table[0] = ValidationErrorInfo<ValidationErrorCode::None>::message;
+    table[1] = ValidationErrorInfo<ValidationErrorCode::InvalidPrice>::message;
+    table[2] = ValidationErrorInfo<ValidationErrorCode::InvalidQuantity>::message;
+    table[3] = ValidationErrorInfo<ValidationErrorCode::InvalidSide>::message;
+    table[4] = ValidationErrorInfo<ValidationErrorCode::InvalidOrderType>::message;
+    table[5] = ValidationErrorInfo<ValidationErrorCode::InvalidTimeInForce>::message;
+    table[6] = ValidationErrorInfo<ValidationErrorCode::InvalidSymbol>::message;
+    table[7] = ValidationErrorInfo<ValidationErrorCode::PriceOutOfRange>::message;
+    table[8] = ValidationErrorInfo<ValidationErrorCode::QuantityOutOfRange>::message;
+    return table;
+}
+
+inline constexpr auto VALIDATION_ERROR_TABLE = create_validation_error_table();
+
+} // namespace detail
+
+/// Compile-time query (when code is known at compile time)
+template<ValidationErrorCode Code>
+[[nodiscard]] consteval std::string_view validation_error_message() noexcept {
+    return detail::ValidationErrorInfo<Code>::message;
+}
+
+/// Runtime query using O(1) lookup table
+[[nodiscard]] inline constexpr std::string_view validation_error_message(ValidationErrorCode code) noexcept {
+    const auto idx = static_cast<uint8_t>(code);
+    if (idx < detail::VALIDATION_ERROR_TABLE.size()) [[likely]] {
+        return detail::VALIDATION_ERROR_TABLE[idx];
+    }
+    return "Unknown error";
+}
+
+// Static assertions for ValidationError
+static_assert(detail::ValidationErrorInfo<ValidationErrorCode::None>::message == "No error");
+static_assert(detail::ValidationErrorInfo<ValidationErrorCode::InvalidPrice>::message == "Invalid price");
+static_assert(detail::VALIDATION_ERROR_TABLE[0] == "No error");
+static_assert(detail::VALIDATION_ERROR_TABLE[1] == "Invalid price");
+
 struct ValidationError {
     ValidationErrorCode code;
     int tag;
@@ -250,18 +630,7 @@ struct ValidationError {
     }
 
     [[nodiscard]] constexpr std::string_view message() const noexcept {
-        switch (code) {
-            case ValidationErrorCode::None:           return "No error";
-            case ValidationErrorCode::InvalidPrice:   return "Invalid price";
-            case ValidationErrorCode::InvalidQuantity: return "Invalid quantity";
-            case ValidationErrorCode::InvalidSide:    return "Invalid side";
-            case ValidationErrorCode::InvalidOrderType: return "Invalid order type";
-            case ValidationErrorCode::InvalidTimeInForce: return "Invalid time in force";
-            case ValidationErrorCode::InvalidSymbol:  return "Invalid symbol";
-            case ValidationErrorCode::PriceOutOfRange: return "Price out of range";
-            case ValidationErrorCode::QuantityOutOfRange: return "Quantity out of range";
-        }
-        return "Unknown error";
+        return validation_error_message(code);
     }
 };
 
