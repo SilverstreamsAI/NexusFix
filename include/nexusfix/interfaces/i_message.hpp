@@ -17,61 +17,279 @@ namespace nfx {
 // ============================================================================
 
 namespace msg_type {
-    inline constexpr char Heartbeat        = '0';
-    inline constexpr char TestRequest      = '1';
-    inline constexpr char ResendRequest    = '2';
-    inline constexpr char Reject           = '3';
-    inline constexpr char SequenceReset    = '4';
-    inline constexpr char Logout           = '5';
-    inline constexpr char Logon            = 'A';
-    inline constexpr char NewOrderSingle   = 'D';
-    inline constexpr char OrderCancelRequest = 'F';
-    inline constexpr char OrderCancelReplaceRequest = 'G';
-    inline constexpr char OrderStatusRequest = 'H';
-    inline constexpr char ExecutionReport  = '8';
-    inline constexpr char OrderCancelReject = '9';
-    // Market Data Messages
-    inline constexpr char MarketDataRequest = 'V';
-    inline constexpr char MarketDataSnapshotFullRefresh = 'W';
-    inline constexpr char MarketDataIncrementalRefresh = 'X';
-    inline constexpr char MarketDataRequestReject = 'Y';
 
-    [[nodiscard]] constexpr std::string_view name(char type) noexcept {
-        switch (type) {
-            case Heartbeat:        return "Heartbeat";
-            case TestRequest:      return "TestRequest";
-            case ResendRequest:    return "ResendRequest";
-            case Reject:           return "Reject";
-            case SequenceReset:    return "SequenceReset";
-            case Logout:           return "Logout";
-            case Logon:            return "Logon";
-            case NewOrderSingle:   return "NewOrderSingle";
-            case OrderCancelRequest: return "OrderCancelRequest";
-            case OrderCancelReplaceRequest: return "OrderCancelReplaceRequest";
-            case OrderStatusRequest: return "OrderStatusRequest";
-            case ExecutionReport:  return "ExecutionReport";
-            case OrderCancelReject: return "OrderCancelReject";
-            case MarketDataRequest: return "MarketDataRequest";
-            case MarketDataSnapshotFullRefresh: return "MarketDataSnapshotFullRefresh";
-            case MarketDataIncrementalRefresh: return "MarketDataIncrementalRefresh";
-            case MarketDataRequestReject: return "MarketDataRequestReject";
-            default:               return "Unknown";
-        }
+// ============================================================================
+// Message Type Constants
+// ============================================================================
+
+inline constexpr char Heartbeat        = '0';
+inline constexpr char TestRequest      = '1';
+inline constexpr char ResendRequest    = '2';
+inline constexpr char Reject           = '3';
+inline constexpr char SequenceReset    = '4';
+inline constexpr char Logout           = '5';
+inline constexpr char Logon            = 'A';
+inline constexpr char NewOrderSingle   = 'D';
+inline constexpr char OrderCancelRequest = 'F';
+inline constexpr char OrderCancelReplaceRequest = 'G';
+inline constexpr char OrderStatusRequest = 'H';
+inline constexpr char ExecutionReport  = '8';
+inline constexpr char OrderCancelReject = '9';
+// Market Data Messages
+inline constexpr char MarketDataRequest = 'V';
+inline constexpr char MarketDataSnapshotFullRefresh = 'W';
+inline constexpr char MarketDataIncrementalRefresh = 'X';
+inline constexpr char MarketDataRequestReject = 'Y';
+
+// ============================================================================
+// Compile-time Message Type Info (TICKET_022)
+// Single source of truth for message type metadata
+// ============================================================================
+
+namespace detail {
+
+/// Compile-time message type metadata
+template<char MsgType>
+struct MsgTypeInfo {
+    static constexpr std::string_view name = "Unknown";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = false;
+};
+
+// Admin/Session messages (is_admin = true)
+template<> struct MsgTypeInfo<'0'> {  // Heartbeat
+    static constexpr std::string_view name = "Heartbeat";
+    static constexpr bool is_admin = true;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'1'> {  // TestRequest
+    static constexpr std::string_view name = "TestRequest";
+    static constexpr bool is_admin = true;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'2'> {  // ResendRequest
+    static constexpr std::string_view name = "ResendRequest";
+    static constexpr bool is_admin = true;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'3'> {  // Reject
+    static constexpr std::string_view name = "Reject";
+    static constexpr bool is_admin = true;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'4'> {  // SequenceReset
+    static constexpr std::string_view name = "SequenceReset";
+    static constexpr bool is_admin = true;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'5'> {  // Logout
+    static constexpr std::string_view name = "Logout";
+    static constexpr bool is_admin = true;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'A'> {  // Logon
+    static constexpr std::string_view name = "Logon";
+    static constexpr bool is_admin = true;
+    static constexpr bool is_valid = true;
+};
+
+// Application messages (is_admin = false)
+template<> struct MsgTypeInfo<'8'> {  // ExecutionReport
+    static constexpr std::string_view name = "ExecutionReport";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'9'> {  // OrderCancelReject
+    static constexpr std::string_view name = "OrderCancelReject";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'D'> {  // NewOrderSingle
+    static constexpr std::string_view name = "NewOrderSingle";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'F'> {  // OrderCancelRequest
+    static constexpr std::string_view name = "OrderCancelRequest";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'G'> {  // OrderCancelReplaceRequest
+    static constexpr std::string_view name = "OrderCancelReplaceRequest";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'H'> {  // OrderStatusRequest
+    static constexpr std::string_view name = "OrderStatusRequest";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'V'> {  // MarketDataRequest
+    static constexpr std::string_view name = "MarketDataRequest";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'W'> {  // MarketDataSnapshotFullRefresh
+    static constexpr std::string_view name = "MarketDataSnapshotFullRefresh";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'X'> {  // MarketDataIncrementalRefresh
+    static constexpr std::string_view name = "MarketDataIncrementalRefresh";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+template<> struct MsgTypeInfo<'Y'> {  // MarketDataRequestReject
+    static constexpr std::string_view name = "MarketDataRequestReject";
+    static constexpr bool is_admin = false;
+    static constexpr bool is_valid = true;
+};
+
+// ============================================================================
+// Compile-time lookup table generation
+// ============================================================================
+
+struct MsgTypeEntry {
+    std::string_view name;
+    bool is_admin;
+    bool is_valid;
+};
+
+/// Generate lookup table at compile time
+consteval std::array<MsgTypeEntry, 128> create_lookup_table() {
+    std::array<MsgTypeEntry, 128> table{};
+
+    // Initialize all entries as unknown/invalid
+    for (auto& entry : table) {
+        entry = {"Unknown", false, false};
     }
 
-    [[nodiscard]] constexpr bool is_admin(char type) noexcept {
-        return type == Heartbeat ||
-               type == TestRequest ||
-               type == ResendRequest ||
-               type == Reject ||
-               type == SequenceReset ||
-               type == Logout ||
-               type == Logon;
-    }
+    // Populate known message types using template info
+    table['0'] = {MsgTypeInfo<'0'>::name, MsgTypeInfo<'0'>::is_admin, true};
+    table['1'] = {MsgTypeInfo<'1'>::name, MsgTypeInfo<'1'>::is_admin, true};
+    table['2'] = {MsgTypeInfo<'2'>::name, MsgTypeInfo<'2'>::is_admin, true};
+    table['3'] = {MsgTypeInfo<'3'>::name, MsgTypeInfo<'3'>::is_admin, true};
+    table['4'] = {MsgTypeInfo<'4'>::name, MsgTypeInfo<'4'>::is_admin, true};
+    table['5'] = {MsgTypeInfo<'5'>::name, MsgTypeInfo<'5'>::is_admin, true};
+    table['8'] = {MsgTypeInfo<'8'>::name, MsgTypeInfo<'8'>::is_admin, true};
+    table['9'] = {MsgTypeInfo<'9'>::name, MsgTypeInfo<'9'>::is_admin, true};
+    table['A'] = {MsgTypeInfo<'A'>::name, MsgTypeInfo<'A'>::is_admin, true};
+    table['D'] = {MsgTypeInfo<'D'>::name, MsgTypeInfo<'D'>::is_admin, true};
+    table['F'] = {MsgTypeInfo<'F'>::name, MsgTypeInfo<'F'>::is_admin, true};
+    table['G'] = {MsgTypeInfo<'G'>::name, MsgTypeInfo<'G'>::is_admin, true};
+    table['H'] = {MsgTypeInfo<'H'>::name, MsgTypeInfo<'H'>::is_admin, true};
+    table['V'] = {MsgTypeInfo<'V'>::name, MsgTypeInfo<'V'>::is_admin, true};
+    table['W'] = {MsgTypeInfo<'W'>::name, MsgTypeInfo<'W'>::is_admin, true};
+    table['X'] = {MsgTypeInfo<'X'>::name, MsgTypeInfo<'X'>::is_admin, true};
+    table['Y'] = {MsgTypeInfo<'Y'>::name, MsgTypeInfo<'Y'>::is_admin, true};
 
-    [[nodiscard]] constexpr bool is_app(char type) noexcept {
-        return !is_admin(type);
+    return table;
+}
+
+/// Compile-time generated lookup table (baked into binary)
+inline constexpr auto LOOKUP_TABLE = create_lookup_table();
+
+} // namespace detail
+
+// ============================================================================
+// Compile-time query (when MsgType is known at compile time)
+// ============================================================================
+
+template<char MsgType>
+[[nodiscard]] consteval std::string_view name() noexcept {
+    return detail::MsgTypeInfo<MsgType>::name;
+}
+
+template<char MsgType>
+[[nodiscard]] consteval bool is_admin() noexcept {
+    return detail::MsgTypeInfo<MsgType>::is_admin;
+}
+
+template<char MsgType>
+[[nodiscard]] consteval bool is_app() noexcept {
+    return !detail::MsgTypeInfo<MsgType>::is_admin;
+}
+
+template<char MsgType>
+[[nodiscard]] consteval bool is_valid() noexcept {
+    return detail::MsgTypeInfo<MsgType>::is_valid;
+}
+
+// ============================================================================
+// Runtime query (when MsgType is runtime variable)
+// Uses O(1) lookup table instead of switch statement
+// ============================================================================
+
+[[nodiscard]] inline constexpr std::string_view name(char type) noexcept {
+    const auto idx = static_cast<unsigned char>(type);
+    if (idx < detail::LOOKUP_TABLE.size()) [[likely]] {
+        return detail::LOOKUP_TABLE[idx].name;
     }
+    return "Unknown";
+}
+
+[[nodiscard]] inline constexpr bool is_admin(char type) noexcept {
+    const auto idx = static_cast<unsigned char>(type);
+    if (idx < detail::LOOKUP_TABLE.size()) [[likely]] {
+        return detail::LOOKUP_TABLE[idx].is_admin;
+    }
+    return false;
+}
+
+[[nodiscard]] inline constexpr bool is_app(char type) noexcept {
+    return !is_admin(type);
+}
+
+[[nodiscard]] inline constexpr bool is_valid(char type) noexcept {
+    const auto idx = static_cast<unsigned char>(type);
+    if (idx < detail::LOOKUP_TABLE.size()) [[likely]] {
+        return detail::LOOKUP_TABLE[idx].is_valid;
+    }
+    return false;
+}
+
+// ============================================================================
+// Compile-time verification (static_assert)
+// ============================================================================
+
+// Verify admin message types
+static_assert(detail::MsgTypeInfo<Heartbeat>::is_admin == true);
+static_assert(detail::MsgTypeInfo<TestRequest>::is_admin == true);
+static_assert(detail::MsgTypeInfo<Logon>::is_admin == true);
+static_assert(detail::MsgTypeInfo<Logout>::is_admin == true);
+
+// Verify application message types
+static_assert(detail::MsgTypeInfo<NewOrderSingle>::is_admin == false);
+static_assert(detail::MsgTypeInfo<ExecutionReport>::is_admin == false);
+static_assert(detail::MsgTypeInfo<MarketDataRequest>::is_admin == false);
+
+// Verify name correctness
+static_assert(detail::MsgTypeInfo<Heartbeat>::name == "Heartbeat");
+static_assert(detail::MsgTypeInfo<Logon>::name == "Logon");
+static_assert(detail::MsgTypeInfo<ExecutionReport>::name == "ExecutionReport");
+
+// Verify lookup table matches template info
+static_assert(detail::LOOKUP_TABLE['0'].name == "Heartbeat");
+static_assert(detail::LOOKUP_TABLE['A'].name == "Logon");
+static_assert(detail::LOOKUP_TABLE['8'].name == "ExecutionReport");
+static_assert(detail::LOOKUP_TABLE['D'].is_admin == false);
+static_assert(detail::LOOKUP_TABLE['5'].is_admin == true);
+
 }
 
 // ============================================================================
