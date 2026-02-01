@@ -159,6 +159,14 @@ set_target_properties(msgtype_dispatch_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# Message store variant benchmark (TICKET_024 Phase 2)
+add_executable(message_store_variant_bench message_store_variant_bench.cpp)
+target_link_libraries(message_store_variant_bench PRIVATE nexusfix pthread)
+target_compile_options(message_store_variant_bench PRIVATE -O3 -march=native)
+set_target_properties(message_store_variant_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # Error message mapping benchmark (TICKET_023)
 add_executable(error_message_bench error_message_bench.cpp)
 target_link_libraries(error_message_bench PRIVATE nexusfix pthread)
