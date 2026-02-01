@@ -151,5 +151,61 @@ target_compile_options(parse_benchmark PRIVATE -O3 -march=native)
 target_compile_options(session_benchmark PRIVATE -O3 -march=native)
 target_compile_options(timing_comparison PRIVATE -O3 -march=native)
 
+# MsgType dispatch benchmark (TICKET_022)
+add_executable(msgtype_dispatch_bench msgtype_dispatch_bench.cpp)
+target_link_libraries(msgtype_dispatch_bench PRIVATE nexusfix pthread)
+target_compile_options(msgtype_dispatch_bench PRIVATE -O3 -march=native)
+set_target_properties(msgtype_dispatch_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
+# Error message mapping benchmark (TICKET_023)
+add_executable(error_message_bench error_message_bench.cpp)
+target_link_libraries(error_message_bench PRIVATE nexusfix pthread)
+target_compile_options(error_message_bench PRIVATE -O3 -march=native)
+set_target_properties(error_message_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
+# Session state machine benchmark (TICKET_023)
+add_executable(session_state_bench session_state_bench.cpp)
+target_link_libraries(session_state_bench PRIVATE nexusfix pthread)
+target_compile_options(session_state_bench PRIVATE -O3 -march=native)
+set_target_properties(session_state_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
+# FIX version detection benchmark (TICKET_023)
+add_executable(fix_version_bench fix_version_bench.cpp)
+target_link_libraries(fix_version_bench PRIVATE nexusfix pthread)
+target_compile_options(fix_version_bench PRIVATE -O3 -march=native)
+set_target_properties(fix_version_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
+# Tag metadata benchmark (TICKET_023)
+add_executable(tag_metadata_bench tag_metadata_bench.cpp)
+target_link_libraries(tag_metadata_bench PRIVATE nexusfix pthread)
+target_compile_options(tag_metadata_bench PRIVATE -O3 -march=native)
+set_target_properties(tag_metadata_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
+# Field types benchmark (TICKET_023)
+add_executable(field_types_bench field_types_bench.cpp)
+target_link_libraries(field_types_bench PRIVATE nexusfix pthread)
+target_compile_options(field_types_bench PRIVATE -O3 -march=native)
+set_target_properties(field_types_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
+# Market data types benchmark (TICKET_023)
+add_executable(market_data_types_bench market_data_types_bench.cpp)
+target_link_libraries(market_data_types_bench PRIVATE nexusfix pthread)
+target_compile_options(market_data_types_bench PRIVATE -O3 -march=native)
+set_target_properties(market_data_types_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # QuickFIX comparison benchmark (optional)
 add_subdirectory(vs_quickfix)

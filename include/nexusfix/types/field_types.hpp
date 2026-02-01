@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <compare>
 #include <concepts>
@@ -257,6 +258,49 @@ enum class Side : char {
     CrossShort = '9'
 };
 
+// Compile-time Side lookup (TICKET_023)
+namespace detail {
+    template<Side S> struct SideInfo { static constexpr std::string_view name = "Unknown"; };
+    template<> struct SideInfo<Side::Buy> { static constexpr std::string_view name = "Buy"; };
+    template<> struct SideInfo<Side::Sell> { static constexpr std::string_view name = "Sell"; };
+    template<> struct SideInfo<Side::BuyMinus> { static constexpr std::string_view name = "BuyMinus"; };
+    template<> struct SideInfo<Side::SellPlus> { static constexpr std::string_view name = "SellPlus"; };
+    template<> struct SideInfo<Side::SellShort> { static constexpr std::string_view name = "SellShort"; };
+    template<> struct SideInfo<Side::SellShortExempt> { static constexpr std::string_view name = "SellShortExempt"; };
+    template<> struct SideInfo<Side::Undisclosed> { static constexpr std::string_view name = "Undisclosed"; };
+    template<> struct SideInfo<Side::Cross> { static constexpr std::string_view name = "Cross"; };
+    template<> struct SideInfo<Side::CrossShort> { static constexpr std::string_view name = "CrossShort"; };
+
+    consteval std::array<std::string_view, 10> create_side_table() {
+        std::array<std::string_view, 10> table{};
+        for (auto& e : table) e = "Unknown";
+        table['1' - '0'] = SideInfo<Side::Buy>::name;
+        table['2' - '0'] = SideInfo<Side::Sell>::name;
+        table['3' - '0'] = SideInfo<Side::BuyMinus>::name;
+        table['4' - '0'] = SideInfo<Side::SellPlus>::name;
+        table['5' - '0'] = SideInfo<Side::SellShort>::name;
+        table['6' - '0'] = SideInfo<Side::SellShortExempt>::name;
+        table['7' - '0'] = SideInfo<Side::Undisclosed>::name;
+        table['8' - '0'] = SideInfo<Side::Cross>::name;
+        table['9' - '0'] = SideInfo<Side::CrossShort>::name;
+        return table;
+    }
+    inline constexpr auto SIDE_TABLE = create_side_table();
+}
+
+template<Side S>
+[[nodiscard]] consteval std::string_view side_name() noexcept {
+    return detail::SideInfo<S>::name;
+}
+
+[[nodiscard]] inline constexpr std::string_view side_name(Side s) noexcept {
+    const auto idx = static_cast<char>(s) - '0';
+    if (idx >= 0 && idx < 10) [[likely]] {
+        return detail::SIDE_TABLE[idx];
+    }
+    return "Unknown";
+}
+
 [[nodiscard]] constexpr bool is_buy_side(Side s) noexcept {
     return s == Side::Buy || s == Side::BuyMinus;
 }
@@ -285,6 +329,56 @@ enum class OrdType : char {
     Pegged          = 'P'
 };
 
+// Compile-time OrdType lookup (TICKET_023)
+namespace detail {
+    template<OrdType T> struct OrdTypeInfo { static constexpr std::string_view name = "Unknown"; };
+    template<> struct OrdTypeInfo<OrdType::Market> { static constexpr std::string_view name = "Market"; };
+    template<> struct OrdTypeInfo<OrdType::Limit> { static constexpr std::string_view name = "Limit"; };
+    template<> struct OrdTypeInfo<OrdType::Stop> { static constexpr std::string_view name = "Stop"; };
+    template<> struct OrdTypeInfo<OrdType::StopLimit> { static constexpr std::string_view name = "StopLimit"; };
+    template<> struct OrdTypeInfo<OrdType::MarketOnClose> { static constexpr std::string_view name = "MarketOnClose"; };
+    template<> struct OrdTypeInfo<OrdType::WithOrWithout> { static constexpr std::string_view name = "WithOrWithout"; };
+    template<> struct OrdTypeInfo<OrdType::LimitOrBetter> { static constexpr std::string_view name = "LimitOrBetter"; };
+    template<> struct OrdTypeInfo<OrdType::LimitWithOrWithout> { static constexpr std::string_view name = "LimitWithOrWithout"; };
+    template<> struct OrdTypeInfo<OrdType::OnBasis> { static constexpr std::string_view name = "OnBasis"; };
+    template<> struct OrdTypeInfo<OrdType::PreviouslyQuoted> { static constexpr std::string_view name = "PreviouslyQuoted"; };
+    template<> struct OrdTypeInfo<OrdType::PreviouslyIndicated> { static constexpr std::string_view name = "PreviouslyIndicated"; };
+    template<> struct OrdTypeInfo<OrdType::Pegged> { static constexpr std::string_view name = "Pegged"; };
+
+    // Sparse table for OrdType (covers '1'-'9', 'D', 'E', 'P')
+    consteval std::array<std::string_view, 128> create_ord_type_table() {
+        std::array<std::string_view, 128> table{};
+        for (auto& e : table) e = "Unknown";
+        table['1'] = OrdTypeInfo<OrdType::Market>::name;
+        table['2'] = OrdTypeInfo<OrdType::Limit>::name;
+        table['3'] = OrdTypeInfo<OrdType::Stop>::name;
+        table['4'] = OrdTypeInfo<OrdType::StopLimit>::name;
+        table['5'] = OrdTypeInfo<OrdType::MarketOnClose>::name;
+        table['6'] = OrdTypeInfo<OrdType::WithOrWithout>::name;
+        table['7'] = OrdTypeInfo<OrdType::LimitOrBetter>::name;
+        table['8'] = OrdTypeInfo<OrdType::LimitWithOrWithout>::name;
+        table['9'] = OrdTypeInfo<OrdType::OnBasis>::name;
+        table['D'] = OrdTypeInfo<OrdType::PreviouslyQuoted>::name;
+        table['E'] = OrdTypeInfo<OrdType::PreviouslyIndicated>::name;
+        table['P'] = OrdTypeInfo<OrdType::Pegged>::name;
+        return table;
+    }
+    inline constexpr auto ORD_TYPE_TABLE = create_ord_type_table();
+}
+
+template<OrdType T>
+[[nodiscard]] consteval std::string_view ord_type_name() noexcept {
+    return detail::OrdTypeInfo<T>::name;
+}
+
+[[nodiscard]] inline constexpr std::string_view ord_type_name(OrdType t) noexcept {
+    const auto idx = static_cast<unsigned char>(static_cast<char>(t));
+    if (idx < 128) [[likely]] {
+        return detail::ORD_TYPE_TABLE[idx];
+    }
+    return "Unknown";
+}
+
 // ============================================================================
 // Order Status
 // ============================================================================
@@ -306,6 +400,61 @@ enum class OrdStatus : char {
     AcceptedForBidding = 'D',
     PendingReplace  = 'E'
 };
+
+// Compile-time OrdStatus lookup (TICKET_023)
+namespace detail {
+    template<OrdStatus S> struct OrdStatusInfo { static constexpr std::string_view name = "Unknown"; };
+    template<> struct OrdStatusInfo<OrdStatus::New> { static constexpr std::string_view name = "New"; };
+    template<> struct OrdStatusInfo<OrdStatus::PartiallyFilled> { static constexpr std::string_view name = "PartiallyFilled"; };
+    template<> struct OrdStatusInfo<OrdStatus::Filled> { static constexpr std::string_view name = "Filled"; };
+    template<> struct OrdStatusInfo<OrdStatus::DoneForDay> { static constexpr std::string_view name = "DoneForDay"; };
+    template<> struct OrdStatusInfo<OrdStatus::Canceled> { static constexpr std::string_view name = "Canceled"; };
+    template<> struct OrdStatusInfo<OrdStatus::Replaced> { static constexpr std::string_view name = "Replaced"; };
+    template<> struct OrdStatusInfo<OrdStatus::PendingCancel> { static constexpr std::string_view name = "PendingCancel"; };
+    template<> struct OrdStatusInfo<OrdStatus::Stopped> { static constexpr std::string_view name = "Stopped"; };
+    template<> struct OrdStatusInfo<OrdStatus::Rejected> { static constexpr std::string_view name = "Rejected"; };
+    template<> struct OrdStatusInfo<OrdStatus::Suspended> { static constexpr std::string_view name = "Suspended"; };
+    template<> struct OrdStatusInfo<OrdStatus::PendingNew> { static constexpr std::string_view name = "PendingNew"; };
+    template<> struct OrdStatusInfo<OrdStatus::Calculated> { static constexpr std::string_view name = "Calculated"; };
+    template<> struct OrdStatusInfo<OrdStatus::Expired> { static constexpr std::string_view name = "Expired"; };
+    template<> struct OrdStatusInfo<OrdStatus::AcceptedForBidding> { static constexpr std::string_view name = "AcceptedForBidding"; };
+    template<> struct OrdStatusInfo<OrdStatus::PendingReplace> { static constexpr std::string_view name = "PendingReplace"; };
+
+    consteval std::array<std::string_view, 128> create_ord_status_table() {
+        std::array<std::string_view, 128> table{};
+        for (auto& e : table) e = "Unknown";
+        table['0'] = OrdStatusInfo<OrdStatus::New>::name;
+        table['1'] = OrdStatusInfo<OrdStatus::PartiallyFilled>::name;
+        table['2'] = OrdStatusInfo<OrdStatus::Filled>::name;
+        table['3'] = OrdStatusInfo<OrdStatus::DoneForDay>::name;
+        table['4'] = OrdStatusInfo<OrdStatus::Canceled>::name;
+        table['5'] = OrdStatusInfo<OrdStatus::Replaced>::name;
+        table['6'] = OrdStatusInfo<OrdStatus::PendingCancel>::name;
+        table['7'] = OrdStatusInfo<OrdStatus::Stopped>::name;
+        table['8'] = OrdStatusInfo<OrdStatus::Rejected>::name;
+        table['9'] = OrdStatusInfo<OrdStatus::Suspended>::name;
+        table['A'] = OrdStatusInfo<OrdStatus::PendingNew>::name;
+        table['B'] = OrdStatusInfo<OrdStatus::Calculated>::name;
+        table['C'] = OrdStatusInfo<OrdStatus::Expired>::name;
+        table['D'] = OrdStatusInfo<OrdStatus::AcceptedForBidding>::name;
+        table['E'] = OrdStatusInfo<OrdStatus::PendingReplace>::name;
+        return table;
+    }
+    inline constexpr auto ORD_STATUS_TABLE = create_ord_status_table();
+}
+
+template<OrdStatus S>
+[[nodiscard]] consteval std::string_view ord_status_name() noexcept {
+    return detail::OrdStatusInfo<S>::name;
+}
+
+[[nodiscard]] inline constexpr std::string_view ord_status_name(OrdStatus s) noexcept {
+    const auto idx = static_cast<unsigned char>(static_cast<char>(s));
+    if (idx < 128) [[likely]] {
+        return detail::ORD_STATUS_TABLE[idx];
+    }
+    return "Unknown";
+}
 
 [[nodiscard]] constexpr bool is_terminal_status(OrdStatus s) noexcept {
     return s == OrdStatus::Filled ||
@@ -341,6 +490,69 @@ enum class ExecType : char {
     OrderStatus     = 'I'
 };
 
+// Compile-time ExecType lookup (TICKET_023)
+namespace detail {
+    template<ExecType E> struct ExecTypeInfo { static constexpr std::string_view name = "Unknown"; };
+    template<> struct ExecTypeInfo<ExecType::New> { static constexpr std::string_view name = "New"; };
+    template<> struct ExecTypeInfo<ExecType::PartialFill> { static constexpr std::string_view name = "PartialFill"; };
+    template<> struct ExecTypeInfo<ExecType::Fill> { static constexpr std::string_view name = "Fill"; };
+    template<> struct ExecTypeInfo<ExecType::DoneForDay> { static constexpr std::string_view name = "DoneForDay"; };
+    template<> struct ExecTypeInfo<ExecType::Canceled> { static constexpr std::string_view name = "Canceled"; };
+    template<> struct ExecTypeInfo<ExecType::Replaced> { static constexpr std::string_view name = "Replaced"; };
+    template<> struct ExecTypeInfo<ExecType::PendingCancel> { static constexpr std::string_view name = "PendingCancel"; };
+    template<> struct ExecTypeInfo<ExecType::Stopped> { static constexpr std::string_view name = "Stopped"; };
+    template<> struct ExecTypeInfo<ExecType::Rejected> { static constexpr std::string_view name = "Rejected"; };
+    template<> struct ExecTypeInfo<ExecType::Suspended> { static constexpr std::string_view name = "Suspended"; };
+    template<> struct ExecTypeInfo<ExecType::PendingNew> { static constexpr std::string_view name = "PendingNew"; };
+    template<> struct ExecTypeInfo<ExecType::Calculated> { static constexpr std::string_view name = "Calculated"; };
+    template<> struct ExecTypeInfo<ExecType::Expired> { static constexpr std::string_view name = "Expired"; };
+    template<> struct ExecTypeInfo<ExecType::Restated> { static constexpr std::string_view name = "Restated"; };
+    template<> struct ExecTypeInfo<ExecType::PendingReplace> { static constexpr std::string_view name = "PendingReplace"; };
+    template<> struct ExecTypeInfo<ExecType::Trade> { static constexpr std::string_view name = "Trade"; };
+    template<> struct ExecTypeInfo<ExecType::TradeCorrect> { static constexpr std::string_view name = "TradeCorrect"; };
+    template<> struct ExecTypeInfo<ExecType::TradeCancel> { static constexpr std::string_view name = "TradeCancel"; };
+    template<> struct ExecTypeInfo<ExecType::OrderStatus> { static constexpr std::string_view name = "OrderStatus"; };
+
+    consteval std::array<std::string_view, 128> create_exec_type_table() {
+        std::array<std::string_view, 128> table{};
+        for (auto& e : table) e = "Unknown";
+        table['0'] = ExecTypeInfo<ExecType::New>::name;
+        table['1'] = ExecTypeInfo<ExecType::PartialFill>::name;
+        table['2'] = ExecTypeInfo<ExecType::Fill>::name;
+        table['3'] = ExecTypeInfo<ExecType::DoneForDay>::name;
+        table['4'] = ExecTypeInfo<ExecType::Canceled>::name;
+        table['5'] = ExecTypeInfo<ExecType::Replaced>::name;
+        table['6'] = ExecTypeInfo<ExecType::PendingCancel>::name;
+        table['7'] = ExecTypeInfo<ExecType::Stopped>::name;
+        table['8'] = ExecTypeInfo<ExecType::Rejected>::name;
+        table['9'] = ExecTypeInfo<ExecType::Suspended>::name;
+        table['A'] = ExecTypeInfo<ExecType::PendingNew>::name;
+        table['B'] = ExecTypeInfo<ExecType::Calculated>::name;
+        table['C'] = ExecTypeInfo<ExecType::Expired>::name;
+        table['D'] = ExecTypeInfo<ExecType::Restated>::name;
+        table['E'] = ExecTypeInfo<ExecType::PendingReplace>::name;
+        table['F'] = ExecTypeInfo<ExecType::Trade>::name;
+        table['G'] = ExecTypeInfo<ExecType::TradeCorrect>::name;
+        table['H'] = ExecTypeInfo<ExecType::TradeCancel>::name;
+        table['I'] = ExecTypeInfo<ExecType::OrderStatus>::name;
+        return table;
+    }
+    inline constexpr auto EXEC_TYPE_TABLE = create_exec_type_table();
+}
+
+template<ExecType E>
+[[nodiscard]] consteval std::string_view exec_type_name() noexcept {
+    return detail::ExecTypeInfo<E>::name;
+}
+
+[[nodiscard]] inline constexpr std::string_view exec_type_name(ExecType e) noexcept {
+    const auto idx = static_cast<unsigned char>(static_cast<char>(e));
+    if (idx < 128) [[likely]] {
+        return detail::EXEC_TYPE_TABLE[idx];
+    }
+    return "Unknown";
+}
+
 // ============================================================================
 // Time In Force
 // ============================================================================
@@ -355,6 +567,46 @@ enum class TimeInForce : char {
     GoodTillDate    = '6',
     AtTheClose      = '7'
 };
+
+// Compile-time TimeInForce lookup (TICKET_023)
+namespace detail {
+    template<TimeInForce T> struct TimeInForceInfo { static constexpr std::string_view name = "Unknown"; };
+    template<> struct TimeInForceInfo<TimeInForce::Day> { static constexpr std::string_view name = "Day"; };
+    template<> struct TimeInForceInfo<TimeInForce::GoodTillCancel> { static constexpr std::string_view name = "GoodTillCancel"; };
+    template<> struct TimeInForceInfo<TimeInForce::AtTheOpening> { static constexpr std::string_view name = "AtTheOpening"; };
+    template<> struct TimeInForceInfo<TimeInForce::ImmediateOrCancel> { static constexpr std::string_view name = "ImmediateOrCancel"; };
+    template<> struct TimeInForceInfo<TimeInForce::FillOrKill> { static constexpr std::string_view name = "FillOrKill"; };
+    template<> struct TimeInForceInfo<TimeInForce::GoodTillCrossing> { static constexpr std::string_view name = "GoodTillCrossing"; };
+    template<> struct TimeInForceInfo<TimeInForce::GoodTillDate> { static constexpr std::string_view name = "GoodTillDate"; };
+    template<> struct TimeInForceInfo<TimeInForce::AtTheClose> { static constexpr std::string_view name = "AtTheClose"; };
+
+    consteval std::array<std::string_view, 8> create_time_in_force_table() {
+        std::array<std::string_view, 8> table{};
+        table[0] = TimeInForceInfo<TimeInForce::Day>::name;
+        table[1] = TimeInForceInfo<TimeInForce::GoodTillCancel>::name;
+        table[2] = TimeInForceInfo<TimeInForce::AtTheOpening>::name;
+        table[3] = TimeInForceInfo<TimeInForce::ImmediateOrCancel>::name;
+        table[4] = TimeInForceInfo<TimeInForce::FillOrKill>::name;
+        table[5] = TimeInForceInfo<TimeInForce::GoodTillCrossing>::name;
+        table[6] = TimeInForceInfo<TimeInForce::GoodTillDate>::name;
+        table[7] = TimeInForceInfo<TimeInForce::AtTheClose>::name;
+        return table;
+    }
+    inline constexpr auto TIME_IN_FORCE_TABLE = create_time_in_force_table();
+}
+
+template<TimeInForce T>
+[[nodiscard]] consteval std::string_view time_in_force_name() noexcept {
+    return detail::TimeInForceInfo<T>::name;
+}
+
+[[nodiscard]] inline constexpr std::string_view time_in_force_name(TimeInForce t) noexcept {
+    const auto idx = static_cast<char>(t) - '0';
+    if (idx >= 0 && idx < 8) [[likely]] {
+        return detail::TIME_IN_FORCE_TABLE[idx];
+    }
+    return "Unknown";
+}
 
 // ============================================================================
 // User-defined Literals
