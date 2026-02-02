@@ -21,16 +21,22 @@
 
 // -----------------------------------------------------------------------------
 // NFX_ASSUME - C++23 [[assume]] with cross-platform support
-// Apple Clang warns on function calls in assume expressions (-Wassume)
+// Requirements:
+//   - GCC 13+ supports [[assume]]
+//   - Clang 19+ supports [[assume]] (Clang 18 does NOT)
+//   - Apple Clang: disabled due to -Wassume warnings on function calls
+//   - MSVC 19.29+ supports __assume()
 // -----------------------------------------------------------------------------
 #if NFX_COMPILER_APPLE_CLANG
     #define NFX_ASSUME(expr) /* disabled: Apple Clang -Wassume */
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__clang__) && __clang_major__ >= 19
+    #define NFX_ASSUME(expr) [[assume(expr)]]
+#elif defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 13
     #define NFX_ASSUME(expr) [[assume(expr)]]
 #elif defined(_MSC_VER) && _MSC_VER >= 1929
     #define NFX_ASSUME(expr) __assume(expr)
 #else
-    #define NFX_ASSUME(expr)
+    #define NFX_ASSUME(expr) /* unsupported compiler/version */
 #endif
 
 // -----------------------------------------------------------------------------
