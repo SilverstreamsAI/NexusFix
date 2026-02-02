@@ -50,28 +50,25 @@ struct Heartbeat {
     [[nodiscard]] static ParseResult<Heartbeat> from_buffer(
         std::span<const char> buffer) noexcept
     {
+        // Use lvalue to call and_then with reference parameter (avoids 12KB copy)
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) {
-            return std::unexpected{parsed.error()};
-        }
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<Heartbeat> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
+            Heartbeat msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
+            msg.test_req_id = p.get_string(tag::TestReqID::value);
 
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
-
-        Heartbeat msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
-        msg.test_req_id = p.get_string(tag::TestReqID::value);
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {
@@ -164,31 +161,27 @@ struct TestRequest {
         std::span<const char> buffer) noexcept
     {
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) {
-            return std::unexpected{parsed.error()};
-        }
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<TestRequest> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
+            TestRequest msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
+            msg.test_req_id = p.get_string(tag::TestReqID::value);
 
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
+            if (msg.test_req_id.empty()) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::MissingRequiredField, tag::TestReqID::value}};
+            }
 
-        TestRequest msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
-        msg.test_req_id = p.get_string(tag::TestReqID::value);
-
-        if (msg.test_req_id.empty()) {
-            return std::unexpected{ParseError{ParseErrorCode::MissingRequiredField, tag::TestReqID::value}};
-        }
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {
@@ -279,38 +272,31 @@ struct ResendRequest {
         std::span<const char> buffer) noexcept
     {
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) {
-            return std::unexpected{parsed.error()};
-        }
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<ResendRequest> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
+            ResendRequest msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
 
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
+            // Use require_field for required integer fields
+            auto begin_result = require_field(to_uint32(p.get_int(7)), 7);  // BeginSeqNo
+            if (!begin_result) [[unlikely]] return std::unexpected{begin_result.error()};
+            msg.begin_seq_no = *begin_result;
 
-        ResendRequest msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
+            auto end_result = require_field(to_uint32(p.get_int(16)), 16);  // EndSeqNo
+            if (!end_result) [[unlikely]] return std::unexpected{end_result.error()};
+            msg.end_seq_no = *end_result;
 
-        if (auto v = p.get_int(7)) {  // BeginSeqNo
-            msg.begin_seq_no = static_cast<uint32_t>(*v);
-        } else {
-            return std::unexpected{ParseError{ParseErrorCode::MissingRequiredField, 7}};
-        }
-
-        if (auto v = p.get_int(16)) {  // EndSeqNo
-            msg.end_seq_no = static_cast<uint32_t>(*v);
-        } else {
-            return std::unexpected{ParseError{ParseErrorCode::MissingRequiredField, 16}};
-        }
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {
@@ -408,34 +394,29 @@ struct SequenceReset {
         std::span<const char> buffer) noexcept
     {
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) {
-            return std::unexpected{parsed.error()};
-        }
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<SequenceReset> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
+            SequenceReset msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
 
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
+            // Use require_field for required NewSeqNo
+            auto seq_result = require_field(to_uint32(p.get_int(36)), 36);  // NewSeqNo
+            if (!seq_result) [[unlikely]] return std::unexpected{seq_result.error()};
+            msg.new_seq_no = *seq_result;
 
-        SequenceReset msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
+            msg.gap_fill_flag = p.get_char(123) == 'Y';  // GapFillFlag
 
-        if (auto v = p.get_int(36)) {  // NewSeqNo
-            msg.new_seq_no = static_cast<uint32_t>(*v);
-        } else {
-            return std::unexpected{ParseError{ParseErrorCode::MissingRequiredField, 36}};
-        }
-
-        msg.gap_fill_flag = p.get_char(123) == 'Y';  // GapFillFlag
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {
@@ -543,42 +524,35 @@ struct Reject {
         std::span<const char> buffer) noexcept
     {
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) {
-            return std::unexpected{parsed.error()};
-        }
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<Reject> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
+            Reject msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
 
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
+            // Use require_field for required RefSeqNum
+            auto ref_result = require_field(to_uint32(p.get_int(tag::RefSeqNum::value)), tag::RefSeqNum::value);
+            if (!ref_result) [[unlikely]] return std::unexpected{ref_result.error()};
+            msg.ref_seq_num = *ref_result;
 
-        Reject msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
+            // Optional fields with monadic extraction
+            if_has_value(to_int(p.get_int(371)),  // RefTagID
+                [&msg](int v) { msg.ref_tag_id = v; });
+            if_has_value(to_int(p.get_int(373)),  // SessionRejectReason
+                [&msg](int v) { msg.session_reject_reason = v; });
 
-        if (auto v = p.get_int(tag::RefSeqNum::value)) {
-            msg.ref_seq_num = static_cast<uint32_t>(*v);
-        } else {
-            return std::unexpected{ParseError{ParseErrorCode::MissingRequiredField, tag::RefSeqNum::value}};
-        }
+            msg.text = p.get_string(tag::Text::value);
 
-        if (auto v = p.get_int(371)) {  // RefTagID
-            msg.ref_tag_id = static_cast<int>(*v);
-        }
-
-        if (auto v = p.get_int(373)) {  // SessionRejectReason
-            msg.session_reject_reason = static_cast<int>(*v);
-        }
-
-        msg.text = p.get_string(tag::Text::value);
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {

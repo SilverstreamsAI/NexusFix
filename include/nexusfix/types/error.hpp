@@ -1,10 +1,12 @@
 #pragma once
 
 #include <array>
-#include <expected>
-#include <string_view>
+#include <climits>
 #include <cstdint>
+#include <expected>
+#include <optional>
 #include <source_location>
+#include <string_view>
 
 namespace nfx {
 
@@ -664,6 +666,78 @@ template <typename T>
 template <typename E>
 [[nodiscard]] constexpr auto make_error(E error) noexcept {
     return std::unexpected{error};
+}
+
+// ============================================================================
+// Monadic Utilities (C++23 std::expected/optional enhancements)
+// ============================================================================
+
+/// Transform optional<int64_t> to optional<uint32_t> with bounds checking
+[[nodiscard]] inline constexpr std::optional<uint32_t>
+to_uint32(std::optional<int64_t> opt) noexcept {
+    return opt.and_then([](int64_t v) -> std::optional<uint32_t> {
+        if (v >= 0 && v <= static_cast<int64_t>(UINT32_MAX)) [[likely]] {
+            return static_cast<uint32_t>(v);
+        }
+        return std::nullopt;
+    });
+}
+
+/// Transform optional<int64_t> to optional<int> with bounds checking
+[[nodiscard]] inline constexpr std::optional<int>
+to_int(std::optional<int64_t> opt) noexcept {
+    return opt.and_then([](int64_t v) -> std::optional<int> {
+        if (v >= INT_MIN && v <= INT_MAX) [[likely]] {
+            return static_cast<int>(v);
+        }
+        return std::nullopt;
+    });
+}
+
+/// Apply a function to optional value, ignoring the result (for side effects)
+template <typename T, typename F>
+constexpr void if_has_value(const std::optional<T>& opt, F&& func) noexcept {
+    if (opt.has_value()) {
+        std::forward<F>(func)(*opt);
+    }
+}
+
+/// Chain multiple expected operations with error propagation
+/// Usage: chain_parse(parse1(data), parse2, parse3)
+template <typename T, typename E, typename F>
+[[nodiscard]] constexpr auto chain_result(std::expected<T, E>&& result, F&& func)
+    -> decltype(std::forward<F>(func)(std::move(*result)))
+{
+    return std::move(result).and_then(std::forward<F>(func));
+}
+
+/// Create ParseResult error for invalid message type
+[[nodiscard]] inline constexpr ParseResult<void>
+require_msg_type(char actual, char expected) noexcept {
+    if (actual == expected) [[likely]] {
+        return {};
+    }
+    return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+}
+
+/// Require a field to be present, returning error if missing
+template <typename T>
+[[nodiscard]] inline constexpr ParseResult<T>
+require_field(std::optional<T> opt, int tag) noexcept {
+    if (opt.has_value()) [[likely]] {
+        return *opt;
+    }
+    return std::unexpected{ParseError{ParseErrorCode::MissingRequiredField, tag}};
+}
+
+/// Transform expected value or propagate error
+/// Usage: result.transform(to_upper).or_else(log_error)
+template <typename T, typename E, typename F>
+[[nodiscard]] constexpr auto
+transform_or_error(std::expected<T, E>&& result, F&& func) noexcept
+    -> std::expected<decltype(std::forward<F>(func)(std::move(*result))), E>
+{
+    return std::move(result).transform(std::forward<F>(func));
 }
 
 } // namespace nfx

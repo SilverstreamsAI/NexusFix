@@ -364,10 +364,9 @@ private:
 
     void handle_logon(const ParsedMessage& msg) noexcept {
         if (state_ == SessionState::LogonSent) {
-            // Response to our logon
-            if (auto v = msg.get_int(108)) {  // HeartBtInt
-                heartbeat_timer_.set_interval(static_cast<int>(*v));
-            }
+            // Response to our logon - use monadic optional for HeartBtInt
+            if_has_value(to_int(msg.get_int(108)),
+                [this](int v) { heartbeat_timer_.set_interval(v); });
             transition(SessionEvent::LogonReceived);
             heartbeat_timer_.reset();
 
@@ -448,13 +447,14 @@ private:
     void handle_resend_request(const ParsedMessage& msg) noexcept {
         ++stats_.resend_requests_sent;
 
-        auto begin_seq = msg.get_int(7);  // BeginSeqNo
-        auto end_seq = msg.get_int(16);   // EndSeqNo
+        // Use monadic optional chaining for required BeginSeqNo and EndSeqNo
+        auto begin_opt = to_uint32(msg.get_int(7));   // BeginSeqNo
+        auto end_opt = to_uint32(msg.get_int(16));    // EndSeqNo
 
-        if (!begin_seq || !end_seq) return;
+        if (!begin_opt || !end_opt) return;
 
-        uint32_t begin = static_cast<uint32_t>(*begin_seq);
-        uint32_t end = static_cast<uint32_t>(*end_seq);
+        uint32_t begin = *begin_opt;
+        uint32_t end = *end_opt;
 
         // Try to retrieve messages from store
         if (message_store_) {
@@ -492,17 +492,12 @@ private:
     void handle_sequence_reset(const ParsedMessage& msg) noexcept {
         ++stats_.sequence_resets;
 
-        if (auto new_seq = msg.get_int(36)) {  // NewSeqNo
-            bool gap_fill = msg.get_char(123) == 'Y';  // GapFillFlag
-
-            if (gap_fill) {
-                // Gap fill - update expected without error
-                sequences_.set_inbound(static_cast<uint32_t>(*new_seq));
-            } else {
-                // Hard reset
-                sequences_.set_inbound(static_cast<uint32_t>(*new_seq));
-            }
-        }
+        // Use monadic optional for NewSeqNo extraction
+        if_has_value(to_uint32(msg.get_int(36)),  // NewSeqNo
+            [this, &msg](uint32_t new_seq) {
+                // Both gap fill and hard reset update sequence (same behavior)
+                sequences_.set_inbound(new_seq);
+            });
     }
 
     void handle_reject(const ParsedMessage& msg) noexcept {

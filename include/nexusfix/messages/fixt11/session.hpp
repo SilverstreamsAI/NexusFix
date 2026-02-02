@@ -36,24 +36,23 @@ struct Heartbeat {
 
     [[nodiscard]] static ParseResult<Heartbeat> from_buffer(std::span<const char> buffer) noexcept {
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) return std::unexpected{parsed.error()};
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<Heartbeat> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
+            Heartbeat msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
+            msg.test_req_id = p.get_string(tag::TestReqID::value);
 
-        Heartbeat msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
-        msg.test_req_id = p.get_string(tag::TestReqID::value);
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {
@@ -110,24 +109,23 @@ struct TestRequest {
 
     [[nodiscard]] static ParseResult<TestRequest> from_buffer(std::span<const char> buffer) noexcept {
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) return std::unexpected{parsed.error()};
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<TestRequest> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
+            TestRequest msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
+            msg.test_req_id = p.get_string(tag::TestReqID::value);
 
-        TestRequest msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
-        msg.test_req_id = p.get_string(tag::TestReqID::value);
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {
@@ -182,30 +180,28 @@ struct ResendRequest {
 
     [[nodiscard]] static ParseResult<ResendRequest> from_buffer(std::span<const char> buffer) noexcept {
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) return std::unexpected{parsed.error()};
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<ResendRequest> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
+            ResendRequest msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
 
-        ResendRequest msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
+            // Monadic optional field extraction with safe type conversion
+            if_has_value(to_uint32(p.get_int(tag::BeginSeqNo::value)),
+                [&msg](uint32_t v) { msg.begin_seq_no = v; });
+            if_has_value(to_uint32(p.get_int(tag::EndSeqNo::value)),
+                [&msg](uint32_t v) { msg.end_seq_no = v; });
 
-        if (auto v = p.get_int(tag::BeginSeqNo::value)) {
-            msg.begin_seq_no = static_cast<uint32_t>(*v);
-        }
-        if (auto v = p.get_int(tag::EndSeqNo::value)) {
-            msg.end_seq_no = static_cast<uint32_t>(*v);
-        }
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {
@@ -263,28 +259,26 @@ struct SequenceReset {
 
     [[nodiscard]] static ParseResult<SequenceReset> from_buffer(std::span<const char> buffer) noexcept {
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) return std::unexpected{parsed.error()};
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<SequenceReset> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
+            SequenceReset msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
 
-        SequenceReset msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
+            if_has_value(to_uint32(p.get_int(tag::NewSeqNo::value)),
+                [&msg](uint32_t v) { msg.new_seq_no = v; });
+            msg.gap_fill_flag = p.get_char(tag::GapFillFlag::value) == 'Y';
 
-        if (auto v = p.get_int(tag::NewSeqNo::value)) {
-            msg.new_seq_no = static_cast<uint32_t>(*v);
-        }
-        msg.gap_fill_flag = p.get_char(tag::GapFillFlag::value) == 'Y';
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {
@@ -348,34 +342,30 @@ struct Reject {
 
     [[nodiscard]] static ParseResult<Reject> from_buffer(std::span<const char> buffer) noexcept {
         auto parsed = IndexedParser::parse(buffer);
-        if (!parsed.has_value()) return std::unexpected{parsed.error()};
+        return parsed.and_then([buffer](IndexedParser& p) -> ParseResult<Reject> {
+            if (p.msg_type() != MSG_TYPE) [[unlikely]] {
+                return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
+            }
 
-        auto& p = *parsed;
-        if (p.msg_type() != MSG_TYPE) {
-            return std::unexpected{ParseError{ParseErrorCode::InvalidMsgType}};
-        }
+            Reject msg;
+            msg.raw_data = buffer;
+            msg.header.begin_string = p.get_string(tag::BeginString::value);
+            msg.header.msg_type = p.msg_type();
+            msg.header.sender_comp_id = p.sender_comp_id();
+            msg.header.target_comp_id = p.target_comp_id();
+            msg.header.msg_seq_num = p.msg_seq_num();
+            msg.header.sending_time = p.sending_time();
 
-        Reject msg;
-        msg.raw_data = buffer;
-        msg.header.begin_string = p.get_string(tag::BeginString::value);
-        msg.header.msg_type = p.msg_type();
-        msg.header.sender_comp_id = p.sender_comp_id();
-        msg.header.target_comp_id = p.target_comp_id();
-        msg.header.msg_seq_num = p.msg_seq_num();
-        msg.header.sending_time = p.sending_time();
+            if_has_value(to_uint32(p.get_int(tag::RefSeqNum::value)),
+                [&msg](uint32_t v) { msg.ref_seq_num = v; });
+            if_has_value(to_int(p.get_int(371)),  // RefTagID
+                [&msg](int v) { msg.ref_tag_id = v; });
+            if_has_value(to_int(p.get_int(373)),  // SessionRejectReason
+                [&msg](int v) { msg.session_reject_reason = v; });
+            msg.text = p.get_string(tag::Text::value);
 
-        if (auto v = p.get_int(tag::RefSeqNum::value)) {
-            msg.ref_seq_num = static_cast<uint32_t>(*v);
-        }
-        if (auto v = p.get_int(371)) {  // RefTagID
-            msg.ref_tag_id = static_cast<int>(*v);
-        }
-        if (auto v = p.get_int(373)) {  // SessionRejectReason
-            msg.session_reject_reason = static_cast<int>(*v);
-        }
-        msg.text = p.get_string(tag::Text::value);
-
-        return msg;
+            return msg;
+        });
     }
 
     class Builder {
