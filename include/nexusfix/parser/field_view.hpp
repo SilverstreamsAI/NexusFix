@@ -54,6 +54,7 @@ struct FieldView {
     /// Parse value as integer
     [[nodiscard]] constexpr std::optional<int64_t> as_int() const noexcept {
         if (value.empty()) [[unlikely]] return std::nullopt;
+        [[assume(!value.empty())]];
 
         int64_t result = 0;
         bool negative = false;
@@ -76,6 +77,7 @@ struct FieldView {
     /// Parse value as unsigned integer
     [[nodiscard]] constexpr std::optional<uint64_t> as_uint() const noexcept {
         if (value.empty()) [[unlikely]] return std::nullopt;
+        [[assume(!value.empty())]];
 
         uint64_t result = 0;
         for (char c : value) [[likely]] {
@@ -164,6 +166,7 @@ public:
         if (pos_ >= data_.size()) [[unlikely]] {
             return FieldView{};
         }
+        [[assume(pos_ < data_.size())]];
 
         const char* __restrict ptr = data_.data();
 

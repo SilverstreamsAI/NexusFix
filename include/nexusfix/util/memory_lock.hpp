@@ -22,6 +22,7 @@
 
 #include <nexusfix/types/error.hpp>
 #include <cstddef>
+#include <utility>
 
 #ifdef _WIN32
     #include <windows.h>
@@ -77,7 +78,7 @@ struct MemoryLockError {
             case MemoryLockErrorCode::SystemError:
                 return "System error";
         }
-        return "Unknown error";
+        std::unreachable();
     }
 };
 
@@ -341,7 +342,7 @@ enum class MemoryAdvice : int {
 [[nodiscard]] inline MemoryLockResult<void> advise_memory(
     void* addr, std::size_t length, MemoryAdvice advice) noexcept
 {
-    if (madvise(addr, length, static_cast<int>(advice)) != 0) {
+    if (madvise(addr, length, std::to_underlying(advice)) != 0) {
         return std::unexpected(MemoryLockError{
             MemoryLockErrorCode::SystemError, errno
         });

@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 
 namespace nfx::util {
 
@@ -72,7 +73,7 @@ inline void prefetch_write_nta(void* ptr) noexcept {
 /// Prefetch with configurable locality
 template<PrefetchLocality Locality = PrefetchLocality::High>
 inline void prefetch(const void* ptr, bool for_write = false) noexcept {
-    __builtin_prefetch(ptr, for_write ? 1 : 0, static_cast<int>(Locality));
+    __builtin_prefetch(ptr, for_write ? 1 : 0, std::to_underlying(Locality));
 }
 
 // ============================================================================

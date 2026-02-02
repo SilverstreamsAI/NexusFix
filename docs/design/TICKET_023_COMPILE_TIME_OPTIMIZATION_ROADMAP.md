@@ -127,7 +127,54 @@ These switches were analyzed but not optimized due to low benefit:
 
 ---
 
+## Impact Analysis: Compile-time vs Runtime Optimizations
+
+### Comparison with Top 5 Runtime Techniques (TICKET_205)
+
+| Category | Technique | Improvement | Multiplier |
+|----------|-----------|-------------|------------|
+| **Runtime** | SIMD Intrinsics | - | 13x |
+| **Runtime** | PMR Pool (P99) | - | 13.9x |
+| **Runtime** | SBE Encoding | - | 5.5x |
+| **Runtime** | Lock-free Queue | - | 6x |
+| **Runtime** | assume_aligned | 16-17% | ~1.2x |
+| **Compile-time** | MsgType dispatch | 73% | ~3.7x |
+| **Compile-time** | State machine | 66-85% | ~3-6x |
+| **Compile-time** | Average | 55-75% | ~2-4x |
+
+### Conclusion
+
+**Compile-time optimizations are 2-4x; Top 5 runtime techniques are 6-14x.**
+
+For the "5000ns to 200ns" latency reduction story, the Top 5 runtime techniques carry most of the weight.
+
+### Key Differences
+
+| Dimension | Top 5 Runtime | Compile-time |
+|-----------|---------------|--------------|
+| **Hot path impact** | Direct (every message) | Indirect (dispatch/lookup) |
+| **Absolute savings** | 1000+ ns | 50-100 ns |
+| **Measurability** | Obvious | Subtle |
+
+### True Value of Compile-time Optimization
+
+The value is **not latency**, but:
+
+1. **Correctness**: Compile-time errors vs runtime crashes
+2. **Zero-cost guarantee**: Not "nearly zero", but literally zero runtime cost
+3. **Code clarity**: 21 lookup tables replace ~300 branches
+4. **Maintainability**: Single source of truth via template specializations
+
+### Recommendation
+
+For C++Online 2026 presentation (TICKET_205):
+- **Top 5 runtime techniques**: Primary content (measurable, dramatic impact)
+- **Compile-time optimization**: Honorable mention (quality, not speed)
+
+---
+
 ## References
 
 - TICKET_022: MsgType Dispatch (73% improvement)
+- TICKET_205: Top 5 Modern C++ Performance Features
 - docs/modernc_quant.md: Techniques #1, #5, #82
