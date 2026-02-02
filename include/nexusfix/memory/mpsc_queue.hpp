@@ -34,6 +34,7 @@
 #include <new>
 
 #include "wait_strategy.hpp"
+#include "nexusfix/util/compiler.hpp"
 
 namespace nfx::memory {
 
@@ -59,7 +60,7 @@ public:
 
     MPSCQueue() noexcept {
         // Initialize all sequences to mark slots as empty
-        [[assume(Capacity >= 2)]];  // Enforced by static_assert
+        NFX_ASSUME(Capacity >= 2);  // Enforced by static_assert
         for (size_t i = 0; i < Capacity; ++i) {
             sequences_[i].value.store(i, std::memory_order_relaxed);
         }
