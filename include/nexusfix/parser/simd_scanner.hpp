@@ -442,12 +442,14 @@ inline SohPositions scan_soh(std::span<const char> data) noexcept {
 #if NFX_AVX512_AVAILABLE
     // Use AVX-512 for buffers >= 128 bytes (2x register size)
     if (data.size() >= 128) [[likely]] {
+        [[assume(data.size() >= AVX512_REGISTER_SIZE)]];
         return scan_soh_avx512(data);
     }
 #endif
 #if NFX_SIMD_AVAILABLE
     // Use AVX2 for buffers >= 64 bytes
     if (data.size() >= 64) [[likely]] {
+        [[assume(data.size() >= AVX2_REGISTER_SIZE)]];
         return scan_soh_avx2(data);
     }
 #endif
@@ -464,11 +466,13 @@ inline size_t find_soh(
     [[maybe_unused]] const size_t remaining = data.size() - start;
 #if NFX_AVX512_AVAILABLE
     if (remaining >= 128) [[likely]] {
+        [[assume(remaining >= AVX512_REGISTER_SIZE)]];
         return find_soh_avx512(data, start);
     }
 #endif
 #if NFX_SIMD_AVAILABLE
     if (remaining >= 64) [[likely]] {
+        [[assume(remaining >= AVX2_REGISTER_SIZE)]];
         return find_soh_avx2(data, start);
     }
 #endif
@@ -485,11 +489,13 @@ inline size_t find_equals(
     [[maybe_unused]] const size_t remaining = data.size() - start;
 #if NFX_AVX512_AVAILABLE
     if (remaining >= 128) [[likely]] {
+        [[assume(remaining >= AVX512_REGISTER_SIZE)]];
         return find_equals_avx512(data, start);
     }
 #endif
 #if NFX_SIMD_AVAILABLE
     if (remaining >= 64) [[likely]] {
+        [[assume(remaining >= AVX2_REGISTER_SIZE)]];
         return find_equals_avx2(data, start);
     }
 #endif

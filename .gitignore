@@ -71,6 +71,8 @@ CLAUDE.md
 
 # Design tickets (keep in private NexusFixRecord repo)
 **/TICKET_*.md
+# Exception: benchmark reports in docs/compare are public
+!docs/compare/TICKET_*.md
 
 # Chinese docs (keep in private repo)
 *_CN.md

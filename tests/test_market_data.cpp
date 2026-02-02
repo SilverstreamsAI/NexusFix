@@ -43,26 +43,26 @@ TEST_CASE("MarketDataRequest Builder - Basic subscription", "[market_data][reque
     std::string msg_str{msg.data(), msg.size()};
 
     // Verify message type
-    REQUIRE(msg_str.find("35=V") != std::string::npos);
+    REQUIRE(msg_str.contains("35=V"));
 
     // Verify MDReqID
-    REQUIRE(msg_str.find("262=MD001") != std::string::npos);
+    REQUIRE(msg_str.contains("262=MD001"));
 
     // Verify subscription type (1 = SnapshotPlusUpdates)
-    REQUIRE(msg_str.find("263=1") != std::string::npos);
+    REQUIRE(msg_str.contains("263=1"));
 
     // Verify market depth
-    REQUIRE(msg_str.find("264=5") != std::string::npos);
+    REQUIRE(msg_str.contains("264=5"));
 
     // Verify entry types count
-    REQUIRE(msg_str.find("267=2") != std::string::npos);
+    REQUIRE(msg_str.contains("267=2"));
 
     // Verify symbols count
-    REQUIRE(msg_str.find("146=2") != std::string::npos);
+    REQUIRE(msg_str.contains("146=2"));
 
     // Verify symbols
-    REQUIRE(msg_str.find("55=AAPL") != std::string::npos);
-    REQUIRE(msg_str.find("55=GOOGL") != std::string::npos);
+    REQUIRE(msg_str.contains("55=AAPL"));
+    REQUIRE(msg_str.contains("55=GOOGL"));
 }
 
 TEST_CASE("MarketDataRequest Builder - Snapshot only", "[market_data][request]") {
@@ -86,10 +86,10 @@ TEST_CASE("MarketDataRequest Builder - Snapshot only", "[market_data][request]")
     std::string msg_str{msg.data(), msg.size()};
 
     // Verify subscription type (0 = Snapshot)
-    REQUIRE(msg_str.find("263=0") != std::string::npos);
+    REQUIRE(msg_str.contains("263=0"));
 
     // Verify 3 entry types
-    REQUIRE(msg_str.find("267=3") != std::string::npos);
+    REQUIRE(msg_str.contains("267=3"));
 }
 
 // ============================================================================

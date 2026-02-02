@@ -4,6 +4,7 @@
 #include <string_view>
 #include <vector>
 #include <optional>
+#include <utility>
 
 #include "nexusfix/types/tag.hpp"
 #include "nexusfix/types/field_types.hpp"
@@ -116,7 +117,7 @@ struct MarketDataRequest {
 
             // MDUpdateType required if subscribing
             if (subscription_type_ == SubscriptionRequestType::SnapshotPlusUpdates) {
-                asm_.field(tag::MDUpdateType::value, static_cast<int64_t>(static_cast<int>(md_update_type_)));
+                asm_.field(tag::MDUpdateType::value, static_cast<int64_t>(std::to_underlying(md_update_type_)));
             }
 
             asm_.field(tag::AggregatedBook::value, aggregated_book_ ? 'Y' : 'N');
