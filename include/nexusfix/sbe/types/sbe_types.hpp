@@ -55,7 +55,7 @@ template <typename T>
 [[nodiscard]] NFX_FORCE_INLINE constexpr T read_le(
     const char* NFX_RESTRICT buffer) noexcept {
     T value{};
-    if (std::is_constant_evaluated()) {
+    if consteval {
         // Constexpr path: manual byte-by-byte construction
         for (std::size_t i = 0; i < sizeof(T); ++i) {
             if constexpr (sizeof(T) == 1) {
@@ -76,7 +76,7 @@ template <typename T>
     requires std::is_trivially_copyable_v<T>
 NFX_FORCE_INLINE constexpr void write_le(
     char* NFX_RESTRICT buffer, T value) noexcept {
-    if (std::is_constant_evaluated()) {
+    if consteval {
         // Constexpr path: manual byte-by-byte write
         for (std::size_t i = 0; i < sizeof(T); ++i) {
             buffer[i] = static_cast<char>(
