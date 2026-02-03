@@ -16,6 +16,9 @@
 #include <numeric>
 #include <cmath>
 #include <chrono>
+#include <thread>
+#include <iostream>
+#include <iomanip>
 
 #ifdef __linux__
 #include <sched.h>
@@ -81,7 +84,7 @@ inline void compiler_barrier() noexcept {
 // Cycle to Time Conversion
 // ============================================================================
 
-/// Estimate CPU frequency in GHz
+/// Estimate CPU frequency in GHz (sleep-based, may underestimate if CPU throttles)
 [[nodiscard]] inline double estimate_cpu_freq_ghz() noexcept {
     using namespace std::chrono;
 
@@ -95,6 +98,27 @@ inline void compiler_barrier() noexcept {
     auto end_time = steady_clock::now();
 
     double elapsed_ns = duration_cast<nanoseconds>(end_time - start_time).count();
+    double cycles = static_cast<double>(end_cycles - start_cycles);
+
+    return cycles / elapsed_ns;  // GHz
+}
+
+/// Estimate CPU frequency in GHz (busy-wait, more accurate - keeps CPU at full speed)
+[[nodiscard]] inline double estimate_cpu_freq_ghz_busy() noexcept {
+    using namespace std::chrono;
+
+    auto start_time = steady_clock::now();
+    uint64_t start_cycles = rdtsc_vm_safe();
+
+    // Busy-wait to keep CPU active (prevents frequency scaling)
+    while (steady_clock::now() - start_time < milliseconds(100)) {
+        asm volatile("pause");
+    }
+
+    uint64_t end_cycles = rdtsc_vm_safe();
+    auto end_time = steady_clock::now();
+
+    double elapsed_ns = duration<double, std::nano>(end_time - start_time).count();
     double cycles = static_cast<double>(end_cycles - start_cycles);
 
     return cycles / elapsed_ns;  // GHz
@@ -305,6 +329,44 @@ inline void warmup_dcache(void* data, size_t size) {
     for (size_t i = 0; i < size; i += 64) {  // Cache line stride
         (void)p[i];  // Read to bring into cache
     }
+}
+
+// ============================================================================
+// Comparison Output Utilities
+// ============================================================================
+
+/// Print before/after comparison with delta percentage
+/// @param label Operation name
+/// @param before_ns Before optimization latency (ns)
+/// @param after_ns After optimization latency (ns)
+/// @param width Column width for formatting
+inline void print_comparison(const char* label,
+                            double before_ns,
+                            double after_ns,
+                            int width = 12) {
+    double delta_pct = (before_ns - after_ns) / before_ns * 100.0;
+    std::cout << std::setw(30) << std::left << label
+              << std::setw(width) << std::fixed << std::setprecision(1) << before_ns
+              << std::setw(width) << after_ns
+              << std::setw(width) << std::showpos << delta_pct << "%"
+              << std::noshowpos << "\n";
+}
+
+/// Print comparison using LatencyStats
+inline void print_comparison(const char* label,
+                            const LatencyStats& before,
+                            const LatencyStats& after) {
+    print_comparison(label, before.mean_ns, after.mean_ns);
+}
+
+/// Print comparison header
+inline void print_comparison_header(const char* before_label = "Before",
+                                   const char* after_label = "After") {
+    std::cout << std::setw(30) << std::left << "Operation"
+              << std::setw(12) << before_label
+              << std::setw(12) << after_label
+              << std::setw(12) << "Delta\n";
+    std::cout << std::string(66, '-') << "\n";
 }
 
 } // namespace nfx::bench

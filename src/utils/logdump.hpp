@@ -6,6 +6,7 @@
     - Three-channel logging: OPS (operational), TRADE (trading), PLUGIN (plugin events)
     - Type-safe logging with C++20 Concepts
     - std::format / std::source_location for context
+    - std::print / std::println (C++23) with fallback for console output
     - Async logging with lock-free queue
     - Daily log rotation with YYYYMMDD naming
     - JSON structured logging for trade channel
@@ -37,6 +38,20 @@
 #include <unordered_map>
 #include <set>
 #include <unordered_set>
+
+// ============================================================================
+// C++23 <print> Header Detection
+// ============================================================================
+#if __has_include(<print>)
+    #include <print>
+    #if defined(__cpp_lib_print) && __cpp_lib_print >= 202207L
+        #define LOGDUMP_HAS_STD_PRINT 1
+    #else
+        #define LOGDUMP_HAS_STD_PRINT 0
+    #endif
+#else
+    #define LOGDUMP_HAS_STD_PRINT 0
+#endif
 
 namespace quantnexus::logging {
 
@@ -513,7 +528,11 @@ public:
 
         if (console_output_) {
             std::lock_guard lock(console_mutex_);
+#if LOGDUMP_HAS_STD_PRINT
+            std::println("[TRADE] {}", json);
+#else
             std::cout << "[TRADE] " << json << '\n';
+#endif
         }
 
         if (trade_writer_) {
@@ -540,11 +559,19 @@ public:
 
         if (console_output_) {
             std::lock_guard lock(console_mutex_);
+#if LOGDUMP_HAS_STD_PRINT
+            if (event.action == "ERROR") {
+                std::println(stderr, "[PLUGIN] {}", json);
+            } else {
+                std::println("[PLUGIN] {}", json);
+            }
+#else
             if (event.action == "ERROR") {
                 std::cerr << "[PLUGIN] " << json << '\n';
             } else {
                 std::cout << "[PLUGIN] " << json << '\n';
             }
+#endif
         }
 
         if (plugin_writer_) {
@@ -592,11 +619,19 @@ private:
 
         if (console_output_) {
             std::lock_guard lock(console_mutex_);
+#if LOGDUMP_HAS_STD_PRINT
+            if (entry.level >= Level::WARN) {
+                std::println(stderr, "{}", formatted);
+            } else {
+                std::println("{}", formatted);
+            }
+#else
             if (entry.level >= Level::WARN) {
                 std::cerr << formatted << '\n';
             } else {
                 std::cout << formatted << '\n';
             }
+#endif
         }
 
         if (ops_writer_) {

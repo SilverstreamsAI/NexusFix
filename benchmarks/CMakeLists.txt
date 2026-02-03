@@ -42,6 +42,14 @@ set_target_properties(cpu_affinity_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# Ranges utilities benchmark (C++23 feature comparison)
+add_executable(ranges_utils_bench ranges_utils_bench.cpp)
+target_link_libraries(ranges_utils_bench PRIVATE nexusfix pthread)
+target_compile_options(ranges_utils_bench PRIVATE -O3 -march=native)
+set_target_properties(ranges_utils_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # Deferred processor benchmark
 add_executable(deferred_processor_bench deferred_processor_bench.cpp)
 target_link_libraries(deferred_processor_bench PRIVATE nexusfix pthread)
