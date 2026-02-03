@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 SilverstreamsAI
+
 /*
     NexusFIX Ranges Utilities
 
@@ -70,13 +73,20 @@ inline constexpr auto trimmed = views::transform([](std::string_view sv) {
 
 /// Generate indices for a container
 [[nodiscard]] inline auto indices(size_t count) {
-    return views::iota(size_t{0}, count);
+    return views::iota(0uz, count);
 }
 
 /// Enumerate a range (returns pairs of index, value)
+/// Uses native std::views::enumerate (C++23) when available
 template<ranges::input_range R>
 [[nodiscard]] auto enumerate(R&& range) {
-    return views::zip(views::iota(size_t{0}), std::forward<R>(range));
+#if defined(__cpp_lib_ranges_enumerate) && __cpp_lib_ranges_enumerate >= 202302L
+    // C++23 native enumerate (better codegen)
+    return std::views::enumerate(std::forward<R>(range));
+#else
+    // C++20 fallback using zip + iota
+    return views::zip(views::iota(0uz), std::forward<R>(range));
+#endif
 }
 
 /// Take first N elements
@@ -123,6 +133,56 @@ template<ranges::input_range R, typename Pred>
 template<ranges::input_range R, typename Pred>
 [[nodiscard]] auto count_if(R&& range, Pred predicate) {
     return ranges::count_if(std::forward<R>(range), predicate);
+}
+
+/// Check if range contains a value (C++23)
+template<ranges::input_range R, typename T>
+[[nodiscard]] bool contains(R&& range, const T& value) {
+#if defined(__cpp_lib_ranges_contains) && __cpp_lib_ranges_contains >= 202207L
+    return ranges::contains(std::forward<R>(range), value);
+#else
+    return ranges::find(std::forward<R>(range), value) != ranges::end(range);
+#endif
+}
+
+// ============================================================================
+// C++23 View Adapters (with fallbacks)
+// ============================================================================
+
+/// Chunk a range into fixed-size groups (C++23)
+template<ranges::input_range R>
+[[nodiscard]] auto chunk(R&& range, size_t n) {
+#if defined(__cpp_lib_ranges_chunk) && __cpp_lib_ranges_chunk >= 202202L
+    return std::forward<R>(range) | views::chunk(n);
+#else
+    // Fallback: just return the range (no chunking support)
+    (void)n;
+    return std::forward<R>(range);
+#endif
+}
+
+/// Sliding window view (C++23)
+template<ranges::input_range R>
+[[nodiscard]] auto slide(R&& range, size_t n) {
+#if defined(__cpp_lib_ranges_slide) && __cpp_lib_ranges_slide >= 202202L
+    return std::forward<R>(range) | views::slide(n);
+#else
+    // Fallback: just return the range (no slide support)
+    (void)n;
+    return std::forward<R>(range);
+#endif
+}
+
+/// Stride view - every Nth element (C++23)
+template<ranges::input_range R>
+[[nodiscard]] auto stride(R&& range, size_t n) {
+#if defined(__cpp_lib_ranges_stride) && __cpp_lib_ranges_stride >= 202207L
+    return std::forward<R>(range) | views::stride(n);
+#else
+    // Fallback: just return the range (no stride support)
+    (void)n;
+    return std::forward<R>(range);
+#endif
 }
 
 // ============================================================================
@@ -191,7 +251,7 @@ public:
             if (eq_pos == std::string_view::npos) return {0, {}};
 
             int tag = 0;
-            for (size_t i = 0; i < eq_pos; ++i) {
+            for (auto i = 0uz; i < eq_pos; ++i) {
                 char c = data_[i];
                 if (c < '0' || c > '9') return {0, {}};
                 tag = tag * 10 + (c - '0');
