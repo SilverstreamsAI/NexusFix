@@ -19,6 +19,7 @@
 #include <array>
 #include <string_view>
 #include <cstring>
+#include <cstdlib>
 #include <mutex>
 
 #include "nexusfix/platform/platform.hpp"
@@ -29,6 +30,12 @@
 // SIMD headers
 #if defined(NFX_HAS_SIMD) && NFX_HAS_SIMD
     #include <immintrin.h>
+#endif
+
+// MSVC warns about intentional cache-line alignment padding (C4324)
+#if defined(_MSC_VER)
+    #pragma warning(push)
+    #pragma warning(disable: 4324)
 #endif
 
 namespace nfx::simd {
@@ -500,7 +507,14 @@ inline void init_simd_dispatch() noexcept {
         detail::g_active_impl = detail::detect_best_impl();
 
         // Check for environment override (for testing)
-        if (const char* impl = std::getenv("NFX_SIMD_IMPL")) {
+        const char* impl = nullptr;
+#if defined(_MSC_VER)
+        size_t impl_len = 0;
+        _dupenv_s(const_cast<char**>(&impl), &impl_len, "NFX_SIMD_IMPL");
+#else
+        impl = std::getenv("NFX_SIMD_IMPL");
+#endif
+        if (impl) {
             if (std::strcmp(impl, "scalar") == 0) {
                 detail::g_active_impl = SimdImpl::Scalar;
             }
@@ -513,6 +527,9 @@ inline void init_simd_dispatch() noexcept {
             else if (std::strcmp(impl, "avx512") == 0) {
                 detail::g_active_impl = SimdImpl::AVX512;
             }
+#endif
+#if defined(_MSC_VER)
+            std::free(const_cast<char*>(impl));
 #endif
         }
 
@@ -635,3 +652,7 @@ static_assert(sizeof(FIXStructuralIndex) % CACHE_LINE_SIZE == 0 ||
     "FIXStructuralIndex size should be reasonable");
 
 }  // namespace nfx::simd
+
+#if defined(_MSC_VER)
+    #pragma warning(pop)
+#endif
