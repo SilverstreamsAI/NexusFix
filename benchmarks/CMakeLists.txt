@@ -215,5 +215,14 @@ set_target_properties(market_data_types_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# Structural index benchmark (TICKET_208 simdjson-style)
+add_executable(structural_index_bench structural_index_bench.cpp)
+target_link_libraries(structural_index_bench PRIVATE nexusfix pthread)
+target_include_directories(structural_index_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_options(structural_index_bench PRIVATE -O3 -march=native)
+set_target_properties(structural_index_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # QuickFIX comparison benchmark (optional)
 add_subdirectory(vs_quickfix)

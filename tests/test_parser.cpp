@@ -7,6 +7,7 @@
 #include "nexusfix/parser/simd_scanner.hpp"
 #include "nexusfix/parser/consteval_parser.hpp"
 #include "nexusfix/parser/runtime_parser.hpp"
+#include "nexusfix/parser/structural_index.hpp"
 #include "nexusfix/interfaces/i_message.hpp"
 
 using namespace nfx;
@@ -397,5 +398,150 @@ TEST_CASE("Message boundary detection", "[parser][simd]") {
         REQUIRE(boundary.complete);
         REQUIRE(boundary.start == 0);
         REQUIRE(boundary.end == EXEC_REPORT.size());
+    }
+}
+
+// ============================================================================
+// Structural Index Tests (TICKET_208 simdjson-style)
+// ============================================================================
+
+TEST_CASE("FIXStructuralIndex scalar", "[parser][simd][structural]") {
+    SECTION("Build index from execution report") {
+        auto idx = simd::build_index_scalar(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()});
+
+        REQUIRE(idx.valid());
+        REQUIRE(idx.soh_count == 19);     // 19 fields in EXEC_REPORT
+        REQUIRE(idx.equals_count == 19);  // Each field has one '='
+        REQUIRE(idx.field_count() == 19);
+    }
+
+    SECTION("Extract tag at index") {
+        auto idx = simd::build_index_scalar(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()});
+
+        // First field is tag 8 (BeginString)
+        REQUIRE(idx.tag_at(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()}, 0) == 8);
+
+        // Third field is tag 35 (MsgType)
+        REQUIRE(idx.tag_at(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()}, 2) == 35);
+    }
+
+    SECTION("Extract value at index") {
+        auto idx = simd::build_index_scalar(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()});
+
+        // First field value is "FIX.4.4"
+        REQUIRE(idx.value_at(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()}, 0) == "FIX.4.4");
+
+        // MsgType value is "8"
+        REQUIRE(idx.value_at(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()}, 2) == "8");
+    }
+
+    SECTION("Find tag by number") {
+        auto idx = simd::build_index_scalar(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()});
+
+        size_t found = idx.find_tag(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()}, 55);  // Symbol
+
+        REQUIRE(found < idx.field_count());
+        REQUIRE(idx.value_at(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()}, found) == "AAPL");
+    }
+}
+
+TEST_CASE("FIXStructuralIndex runtime dispatch", "[parser][simd][structural]") {
+    // Initialize runtime dispatch
+    simd::init_simd_dispatch();
+
+    SECTION("Active implementation is detected") {
+        auto impl = simd::active_simd_impl();
+        INFO("Active SIMD implementation: " << simd::simd_impl_name(impl));
+
+        // Should be at least scalar
+        REQUIRE(impl >= simd::SimdImpl::Scalar);
+    }
+
+    SECTION("Build index via runtime dispatch") {
+        auto idx = simd::build_index(
+            std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()});
+
+        REQUIRE(idx.valid());
+        REQUIRE(idx.soh_count == 19);
+        REQUIRE(idx.equals_count == 19);
+    }
+}
+
+TEST_CASE("IndexedFieldAccessor", "[parser][simd][structural]") {
+    auto idx = simd::build_index(
+        std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()});
+
+    simd::IndexedFieldAccessor accessor{idx,
+        std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()}};
+
+    SECTION("Field count") {
+        REQUIRE(accessor.field_count() == 19);
+    }
+
+    SECTION("Get by tag") {
+        REQUIRE(accessor.get(8) == "FIX.4.4");   // BeginString
+        REQUIRE(accessor.get(35) == "8");        // MsgType (ExecutionReport)
+        REQUIRE(accessor.get(55) == "AAPL");     // Symbol
+        REQUIRE(accessor.get(37) == "ORDER123"); // OrderID
+    }
+
+    SECTION("Get as integer") {
+        REQUIRE(accessor.get_int(9) == 176);   // BodyLength
+        REQUIRE(accessor.get_int(34) == 1);    // MsgSeqNum
+        REQUIRE(accessor.get_int(38) == 100);  // OrderQty
+    }
+
+    SECTION("Get as char") {
+        REQUIRE(accessor.msg_type() == '8');   // ExecutionReport
+        REQUIRE(accessor.get_char(54) == '1'); // Side = Buy
+    }
+
+    SECTION("Non-existent tag") {
+        REQUIRE(accessor.get(999) == "");
+        REQUIRE(accessor.get_int(999) == 0);
+    }
+}
+
+TEST_CASE("PaddedMessageBuffer", "[parser][simd][structural]") {
+    SECTION("Construction and set") {
+        simd::MediumPaddedBuffer buffer;
+
+        REQUIRE(buffer.empty());
+        REQUIRE(buffer.capacity() == 1024);
+
+        buffer.set(std::span<const char>{HEARTBEAT.data(), HEARTBEAT.size()});
+
+        REQUIRE(!buffer.empty());
+        REQUIRE(buffer.size() == HEARTBEAT.size());
+    }
+
+    SECTION("SIMD-safe pointer") {
+        simd::MediumPaddedBuffer buffer;
+        buffer.set(std::span<const char>{HEARTBEAT.data(), HEARTBEAT.size()});
+
+        // Can safely read past end (padding is zeroed)
+        const char* ptr = buffer.simd_safe_ptr();
+        REQUIRE(ptr[buffer.size()] == '\0');     // First byte of padding
+        REQUIRE(ptr[buffer.size() + 63] == '\0'); // Last byte of padding
+    }
+
+    SECTION("Build index from padded buffer") {
+        simd::MediumPaddedBuffer buffer;
+        buffer.set(std::span<const char>{EXEC_REPORT.data(), EXEC_REPORT.size()});
+
+        auto idx = simd::build_index(buffer.data());
+
+        REQUIRE(idx.valid());
+        REQUIRE(idx.soh_count == 19);
     }
 }
