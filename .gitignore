@@ -27,6 +27,7 @@ CMakeFiles/
 cmake_install.cmake
 Makefile
 compile_commands.json
+Testing/
 
 # Third-party source (use system packages)
 quickfix/
