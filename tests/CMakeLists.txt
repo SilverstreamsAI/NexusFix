@@ -48,3 +48,19 @@ set_target_properties(nexusfix_tests platform_test
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/tests
 )
+
+# mimalloc memory resource tests (optional, requires NFX_ENABLE_MIMALLOC=ON)
+if(NFX_ENABLE_MIMALLOC)
+    add_executable(mimalloc_tests test_mimalloc.cpp)
+    target_link_libraries(mimalloc_tests PRIVATE nexusfix Catch2::Catch2WithMain)
+    if(NOT MSVC)
+        # Suppress Abseil __int128 pedantic warnings when Abseil is also enabled
+        target_compile_options(mimalloc_tests PRIVATE
+            -Wall -Wextra -Wno-pedantic -Wno-overflow -Wno-error=pedantic -Wno-error=overflow
+        )
+    endif()
+    set_target_properties(mimalloc_tests PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/tests
+    )
+    catch_discover_tests(mimalloc_tests)
+endif()

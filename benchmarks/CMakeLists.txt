@@ -224,5 +224,24 @@ set_target_properties(structural_index_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# mimalloc vs PMR benchmark (optional, requires NFX_ENABLE_MIMALLOC=ON)
+if(NFX_ENABLE_MIMALLOC)
+    add_executable(mimalloc_bench mimalloc_bench.cpp)
+    target_link_libraries(mimalloc_bench PRIVATE nexusfix pthread)
+    target_include_directories(mimalloc_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_compile_options(mimalloc_bench PRIVATE -O3 -march=native)
+    set_target_properties(mimalloc_bench PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+    )
+
+    add_executable(session_heap_isolation_bench session_heap_isolation_bench.cpp)
+    target_link_libraries(session_heap_isolation_bench PRIVATE nexusfix pthread)
+    target_include_directories(session_heap_isolation_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_compile_options(session_heap_isolation_bench PRIVATE -O3 -march=native)
+    set_target_properties(session_heap_isolation_bench PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+    )
+endif()
+
 # QuickFIX comparison benchmark (optional)
 add_subdirectory(vs_quickfix)
