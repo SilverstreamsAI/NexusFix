@@ -58,6 +58,15 @@ set_target_properties(deferred_processor_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# Coroutine patterns benchmark (TICKET_211)
+add_executable(coroutine_bench coroutine_bench.cpp)
+target_link_libraries(coroutine_bench PRIVATE nexusfix pthread)
+target_include_directories(coroutine_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_options(coroutine_bench PRIVATE -O3 -march=native)
+set_target_properties(coroutine_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # Optimization summary benchmark (before vs after all optimizations)
 add_executable(optimization_summary_bench optimization_summary_bench.cpp)
 target_link_libraries(optimization_summary_bench PRIVATE nexusfix pthread)
