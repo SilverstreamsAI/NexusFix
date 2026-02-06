@@ -56,6 +56,7 @@ public:
         size_t max_bytes = 100'000'000;   // 100MB max
         bool evict_oldest = true;         // Evict oldest when full
         size_t pool_size_bytes = 64 * 1024 * 1024;  // 64MB PMR pool
+        std::pmr::memory_resource* upstream_resource = nullptr;  // Optional: mimalloc SessionHeap
     };
 
     /// PMR pool metrics for monitoring
@@ -68,9 +69,10 @@ public:
 
     explicit MemoryMessageStore(Config config)
         : config_(std::move(config))
-        , pool_storage_(config_.pool_size_bytes)
+        , pool_storage_(config_.upstream_resource ? 0 : config_.pool_size_bytes)
         , pool_(pool_storage_.data(), pool_storage_.size(),
-                std::pmr::null_memory_resource())
+                config_.upstream_resource ? config_.upstream_resource
+                                         : std::pmr::null_memory_resource())
         , pool_metrics_{.pool_capacity = config_.pool_size_bytes} {}
 
     explicit MemoryMessageStore(std::string_view session_id)

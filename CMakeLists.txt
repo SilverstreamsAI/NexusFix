@@ -12,6 +12,7 @@ option(NFX_ENABLE_AVX512 "Enable AVX-512 optimizations (requires CPU support)" O
 option(NFX_ENABLE_IO_URING "Enable io_uring transport (Linux only)" OFF)
 option(NFX_ENABLE_LOGGING "Enable Quill high-performance logging" ON)
 option(NFX_ENABLE_ABSEIL "Enable Abseil for Swiss Table hash maps (~3x faster)" ON)
+option(NFX_ENABLE_MIMALLOC "Enable mimalloc allocator for per-session heaps" OFF)
 option(NFX_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(NFX_BUILD_TESTS "Build tests" ON)
 option(NFX_BUILD_EXAMPLES "Build examples" ON)
@@ -42,6 +43,20 @@ if(NFX_ENABLE_ABSEIL)
     set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
     set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(abseil-cpp)
+endif()
+
+# mimalloc - Microsoft's high-performance allocator (per-session heaps, O(1) cleanup)
+if(NFX_ENABLE_MIMALLOC)
+    FetchContent_Declare(
+        mimalloc
+        GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
+        GIT_TAG v2.1.7
+        GIT_SHALLOW TRUE
+    )
+    set(MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_OBJECT OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(mimalloc)
 endif()
 
 # Platform-specific compiler flags
@@ -175,6 +190,13 @@ if(NFX_ENABLE_ABSEIL)
     message(STATUS "Abseil Swiss Tables enabled (~3x faster hash map lookups)")
 endif()
 
+# mimalloc allocator support (per-session heaps)
+if(NFX_ENABLE_MIMALLOC)
+    target_link_libraries(nexusfix INTERFACE mimalloc-static)
+    target_compile_definitions(nexusfix INTERFACE NFX_HAS_MIMALLOC=1)
+    message(STATUS "mimalloc allocator enabled (per-session heaps, O(1) cleanup)")
+endif()
+
 # io_uring support (Linux only)
 if(NFX_ENABLE_IO_URING AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(PkgConfig REQUIRED)
@@ -216,7 +238,7 @@ endif()
 # Install targets (only when no FetchContent dependencies are linked)
 # Quill and Abseil don't provide export sets, so we can only export
 # the pure header-only library without these dependencies
-if(NOT NFX_ENABLE_LOGGING AND NOT NFX_ENABLE_ABSEIL)
+if(NOT NFX_ENABLE_LOGGING AND NOT NFX_ENABLE_ABSEIL AND NOT NFX_ENABLE_MIMALLOC)
     include(GNUInstallDirs)
     install(TARGETS nexusfix
         EXPORT nexusfixTargets
