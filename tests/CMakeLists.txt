@@ -5,6 +5,7 @@ add_executable(nexusfix_tests
     test_memory.cpp
     test_market_data.cpp
     test_sbe.cpp
+    test_queues.cpp
 )
 
 target_link_libraries(nexusfix_tests PRIVATE

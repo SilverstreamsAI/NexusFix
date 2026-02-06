@@ -138,6 +138,14 @@ set_target_properties(mpsc_queue_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
 )
 
+# MPMC queue benchmark (Rigtorp turn-based multi-producer multi-consumer)
+add_executable(mpmc_queue_bench mpmc_queue_bench.cpp)
+target_link_libraries(mpmc_queue_bench PRIVATE nexusfix pthread)
+target_compile_options(mpmc_queue_bench PRIVATE -O3 -march=native -Wno-interference-size)
+set_target_properties(mpmc_queue_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # SBE binary encoding benchmark (SBE vs FIX text parsing)
 add_executable(sbe_benchmark sbe_benchmark.cpp)
 target_link_libraries(sbe_benchmark PRIVATE nexusfix pthread)
