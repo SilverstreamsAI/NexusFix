@@ -33,11 +33,14 @@
 #include "nexusfix/session/sequence.hpp"
 #include "nexusfix/session/coroutine.hpp"
 #include "nexusfix/session/session_manager.hpp"
+#include "nexusfix/session/async_primitives.hpp"
+#include "nexusfix/session/coroutine_session.hpp"
 
 // Transport
 #include "nexusfix/transport/socket.hpp"
 #include "nexusfix/transport/tcp_transport.hpp"
 #include "nexusfix/transport/io_uring_transport.hpp"
+#include "nexusfix/transport/async_transport.hpp"
 
 namespace nfx {
 
