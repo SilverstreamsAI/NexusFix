@@ -29,7 +29,12 @@
 
 // SIMD headers
 #if defined(NFX_HAS_SIMD) && NFX_HAS_SIMD
-    #include <immintrin.h>
+    #if defined(NFX_HAS_XSIMD) && NFX_HAS_XSIMD
+        #include <xsimd/xsimd.hpp>
+        #include <bit>
+    #else
+        #include <immintrin.h>
+    #endif
 #endif
 
 // MSVC warns about intentional cache-line alignment padding (C4324)
@@ -239,10 +244,136 @@ inline FIXStructuralIndex build_index_scalar(std::span<const char> data) noexcep
 }
 
 // ============================================================================
-// AVX2 Implementation
+// SIMD Implementations
 // ============================================================================
 
 #if defined(NFX_HAS_SIMD) && NFX_HAS_SIMD
+
+#if defined(NFX_HAS_XSIMD) && NFX_HAS_XSIMD
+
+// ============================================================================
+// xsimd Portable SIMD Structural Index (TICKET_212)
+// ============================================================================
+
+namespace detail_idx {
+
+/// Unified extract_positions from bitmask (works for both 32-bit and 64-bit masks)
+inline void extract_positions(
+    uint64_t mask,
+    size_t offset,
+    uint16_t* positions,
+    uint16_t& count,
+    uint16_t max_count) noexcept
+{
+    while (mask != 0 && count < max_count) {
+        int bit = std::countr_zero(mask);
+        positions[count++] = static_cast<uint16_t>(offset + bit);
+        mask &= mask - 1;
+    }
+}
+
+/// Arch-templated build_index (processes batch_t::size bytes at a time)
+template <typename Arch>
+[[nodiscard]] NFX_HOT
+inline FIXStructuralIndex build_index_xsimd(std::span<const char> data) noexcept {
+    using batch_t = xsimd::batch<uint8_t, Arch>;
+    constexpr size_t width = batch_t::size;
+
+    FIXStructuralIndex idx;
+    idx.message_size = static_cast<uint16_t>(data.size());
+
+    const batch_t soh_vec(static_cast<uint8_t>(fix::SOH));
+    const batch_t eq_vec(static_cast<uint8_t>(fix::EQUALS));
+    const size_t simd_end = data.size() & ~(width - 1);
+    const auto* ptr = reinterpret_cast<const uint8_t*>(data.data());
+
+    // Process chunks
+    for (size_t i = 0; i < simd_end && idx.soh_count < MAX_FIELDS - width; i += width) {
+        auto chunk = xsimd::load_unaligned<Arch>(ptr + i);
+
+        // Detect SOH positions
+        uint64_t soh_mask = (chunk == soh_vec).mask();
+
+        // Detect equals positions
+        uint64_t eq_mask = (chunk == eq_vec).mask();
+
+        // Extract positions from masks
+        extract_positions(soh_mask, i, idx.soh_positions.data(),
+                          idx.soh_count, MAX_FIELDS);
+        extract_positions(eq_mask, i, idx.equals_positions.data(),
+                          idx.equals_count, MAX_FIELDS);
+    }
+
+    // Handle remaining bytes with scalar code
+    const char* cptr = data.data();
+    for (size_t i = simd_end; i < data.size() && idx.soh_count < MAX_FIELDS; ++i) {
+        if (cptr[i] == fix::EQUALS) [[unlikely]] {
+            idx.equals_positions[idx.equals_count++] = static_cast<uint16_t>(i);
+        }
+        else if (cptr[i] == fix::SOH) [[unlikely]] {
+            idx.soh_positions[idx.soh_count++] = static_cast<uint16_t>(i);
+        }
+    }
+
+    // Post-process to find important tags (pure scalar)
+    for (uint16_t i = 0; i < idx.equals_count && i < 10; ++i) {
+        uint16_t eq_pos = idx.equals_positions[i];
+        if (eq_pos < 2) continue;
+
+        // Check for 2-digit tags
+        if (cptr[eq_pos - 2] >= '0' && cptr[eq_pos - 2] <= '9' &&
+            cptr[eq_pos - 1] >= '0' && cptr[eq_pos - 1] <= '9') {
+            int tag = (cptr[eq_pos - 2] - '0') * 10 + (cptr[eq_pos - 1] - '0');
+            if (tag == 35) idx.msg_type_start = eq_pos - 2;
+        }
+        // Check for 1-digit tags
+        else if (cptr[eq_pos - 1] >= '0' && cptr[eq_pos - 1] <= '9') {
+            int tag = cptr[eq_pos - 1] - '0';
+            if (tag == 8) continue;  // BeginString
+            if (tag == 9) idx.body_length_start = eq_pos - 1;
+        }
+    }
+
+    // Find checksum tag (near end)
+    if (idx.equals_count > 0) {
+        size_t end_idx = (idx.equals_count > 5) ? idx.equals_count - 5 : 0;
+        for (size_t i = idx.equals_count; i > end_idx; --i) {
+            uint16_t eq_pos = idx.equals_positions[i - 1];
+            if (eq_pos >= 2 && cptr[eq_pos - 2] == '1' && cptr[eq_pos - 1] == '0') {
+                idx.checksum_start = eq_pos - 2;
+                break;
+            }
+        }
+    }
+
+    return idx;
+}
+
+}  // namespace detail_idx
+
+// Named wrappers for backward compatibility
+
+/// Build structural index using AVX2 (processes 32 bytes at a time)
+[[nodiscard]] NFX_HOT
+inline FIXStructuralIndex build_index_avx2(std::span<const char> data) noexcept {
+    return detail_idx::build_index_xsimd<xsimd::avx2>(data);
+}
+
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+
+/// Build structural index using AVX-512 (processes 64 bytes at a time)
+[[nodiscard]] NFX_HOT
+inline FIXStructuralIndex build_index_avx512(std::span<const char> data) noexcept {
+    return detail_idx::build_index_xsimd<xsimd::avx512bw>(data);
+}
+
+#endif  // AVX-512
+
+#else  // !NFX_HAS_XSIMD - Raw intrinsics fallback
+
+// ============================================================================
+// AVX2 Implementation (raw intrinsics)
+// ============================================================================
 
 /// Extract all set bit positions from 32-bit mask
 inline void extract_positions_avx2(
@@ -334,10 +465,8 @@ inline FIXStructuralIndex build_index_avx2(std::span<const char> data) noexcept 
     return idx;
 }
 
-#endif  // NFX_HAS_SIMD
-
 // ============================================================================
-// AVX-512 Implementation
+// AVX-512 Implementation (raw intrinsics)
 // ============================================================================
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
@@ -427,6 +556,10 @@ inline FIXStructuralIndex build_index_avx512(std::span<const char> data) noexcep
 }
 
 #endif  // AVX-512
+
+#endif  // NFX_HAS_XSIMD
+
+#endif  // NFX_HAS_SIMD
 
 // ============================================================================
 // Runtime SIMD Dispatch (simdjson-style)

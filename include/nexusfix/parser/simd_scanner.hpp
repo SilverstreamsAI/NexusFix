@@ -20,7 +20,12 @@
 
 // SIMD feature detection
 #if defined(NFX_HAS_SIMD) && NFX_HAS_SIMD
-    #include <immintrin.h>
+    #if defined(NFX_HAS_XSIMD) && NFX_HAS_XSIMD
+        #include <xsimd/xsimd.hpp>
+        #include <bit>
+    #else
+        #include <immintrin.h>
+    #endif
     #define NFX_SIMD_AVAILABLE 1
 
     // AVX-512 requires both F (foundation) and BW (byte/word) extensions
@@ -122,10 +127,243 @@ inline size_t find_equals_scalar(
 }
 
 // ============================================================================
-// AVX2 SIMD Scanner
+// SIMD Scanner Implementations
 // ============================================================================
 
 #if NFX_SIMD_AVAILABLE
+
+#if defined(NFX_HAS_XSIMD) && NFX_HAS_XSIMD
+
+// ============================================================================
+// xsimd Portable SIMD Scanner (TICKET_212)
+// ============================================================================
+
+namespace detail {
+
+/// Arch-templated SOH scanner (processes batch_t::size bytes at a time)
+template <typename Arch>
+[[nodiscard]] NFX_HOT
+inline SohPositions scan_soh_xsimd(std::span<const char> data) noexcept {
+    using batch_t = xsimd::batch<uint8_t, Arch>;
+    constexpr size_t width = batch_t::size;
+
+    SohPositions result;
+
+    const batch_t soh_vec(static_cast<uint8_t>(fix::SOH));
+    const size_t simd_end = data.size() & ~(width - 1);
+    const auto* ptr = reinterpret_cast<const uint8_t*>(data.data());
+
+    for (size_t i = 0; i < simd_end && result.count < MAX_SOH_POSITIONS - width; i += width) {
+        auto chunk = xsimd::load_unaligned<Arch>(ptr + i);
+        auto cmp = (chunk == soh_vec);
+        uint64_t mask = cmp.mask();
+
+        while (mask != 0) [[likely]] {
+            int bit = std::countr_zero(mask);
+            result.push(static_cast<uint16_t>(i + bit));
+            mask &= mask - 1;
+        }
+    }
+
+    // Scalar tail
+    for (size_t i = simd_end; i < data.size() && result.count < MAX_SOH_POSITIONS; ++i) {
+        if (data[i] == fix::SOH) [[unlikely]] {
+            result.push(static_cast<uint16_t>(i));
+        }
+    }
+
+    return result;
+}
+
+/// Arch-templated find next SOH
+template <typename Arch>
+[[nodiscard]] NFX_HOT
+inline size_t find_soh_xsimd(
+    std::span<const char> data,
+    size_t start = 0) noexcept
+{
+    using batch_t = xsimd::batch<uint8_t, Arch>;
+    constexpr size_t width = batch_t::size;
+
+    if (start >= data.size()) [[unlikely]] return data.size();
+
+    const batch_t soh_vec(static_cast<uint8_t>(fix::SOH));
+    const auto* ptr = reinterpret_cast<const uint8_t*>(data.data());
+    size_t i = start;
+
+    // Align to register boundary for optimal performance
+    while (i < data.size() && (reinterpret_cast<uintptr_t>(ptr + i) & (width - 1)) != 0) {
+        if (data[i] == fix::SOH) [[unlikely]] return i;
+        ++i;
+    }
+
+    // SIMD loop with aligned loads
+    const size_t simd_end = data.size() & ~(width - 1);
+    while (i < simd_end) [[likely]] {
+        auto chunk = xsimd::load_aligned<Arch>(ptr + i);
+        auto cmp = (chunk == soh_vec);
+        uint64_t mask = cmp.mask();
+
+        if (mask != 0) [[unlikely]] {
+            return i + std::countr_zero(mask);
+        }
+        i += width;
+    }
+
+    // Scalar tail
+    while (i < data.size()) {
+        if (data[i] == fix::SOH) [[unlikely]] return i;
+        ++i;
+    }
+
+    return data.size();
+}
+
+/// Arch-templated find '='
+template <typename Arch>
+[[nodiscard]] NFX_HOT
+inline size_t find_equals_xsimd(
+    std::span<const char> data,
+    size_t start = 0) noexcept
+{
+    using batch_t = xsimd::batch<uint8_t, Arch>;
+    constexpr size_t width = batch_t::size;
+
+    if (start >= data.size()) [[unlikely]] return data.size();
+
+    const batch_t eq_vec(static_cast<uint8_t>(fix::EQUALS));
+    const auto* ptr = reinterpret_cast<const uint8_t*>(data.data());
+    size_t i = start;
+
+    // Align to register boundary
+    while (i < data.size() && (reinterpret_cast<uintptr_t>(ptr + i) & (width - 1)) != 0) {
+        if (data[i] == fix::EQUALS) [[unlikely]] return i;
+        ++i;
+    }
+
+    // SIMD loop with aligned loads
+    const size_t simd_end = data.size() & ~(width - 1);
+    while (i < simd_end) [[likely]] {
+        auto chunk = xsimd::load_aligned<Arch>(ptr + i);
+        auto cmp = (chunk == eq_vec);
+        uint64_t mask = cmp.mask();
+
+        if (mask != 0) [[unlikely]] {
+            return i + std::countr_zero(mask);
+        }
+        i += width;
+    }
+
+    // Scalar tail
+    while (i < data.size()) {
+        if (data[i] == fix::EQUALS) [[unlikely]] return i;
+        ++i;
+    }
+
+    return data.size();
+}
+
+/// Arch-templated count SOH occurrences
+template <typename Arch>
+[[nodiscard]] NFX_HOT
+inline size_t count_soh_xsimd(std::span<const char> data) noexcept {
+    using batch_t = xsimd::batch<uint8_t, Arch>;
+    constexpr size_t width = batch_t::size;
+
+    const batch_t soh_vec(static_cast<uint8_t>(fix::SOH));
+    const size_t simd_end = data.size() & ~(width - 1);
+    const auto* ptr = reinterpret_cast<const uint8_t*>(data.data());
+
+    size_t count = 0;
+
+    for (size_t i = 0; i < simd_end; i += width) {
+        auto chunk = xsimd::load_unaligned<Arch>(ptr + i);
+        auto cmp = (chunk == soh_vec);
+        uint64_t mask = cmp.mask();
+        count += std::popcount(mask);
+    }
+
+    // Scalar tail
+    for (size_t i = simd_end; i < data.size(); ++i) {
+        if (data[i] == fix::SOH) [[unlikely]] ++count;
+    }
+
+    return count;
+}
+
+}  // namespace detail
+
+// Named wrappers for backward compatibility (call xsimd templates with explicit arch)
+
+/// AVX2-accelerated SOH scanner (processes 32 bytes at a time)
+[[nodiscard]] NFX_HOT
+inline SohPositions scan_soh_avx2(std::span<const char> data) noexcept {
+    return detail::scan_soh_xsimd<xsimd::avx2>(data);
+}
+
+/// AVX2-accelerated find next SOH
+[[nodiscard]] NFX_HOT
+inline size_t find_soh_avx2(
+    std::span<const char> data,
+    size_t start = 0) noexcept
+{
+    return detail::find_soh_xsimd<xsimd::avx2>(data, start);
+}
+
+/// AVX2-accelerated find '='
+[[nodiscard]] NFX_HOT
+inline size_t find_equals_avx2(
+    std::span<const char> data,
+    size_t start = 0) noexcept
+{
+    return detail::find_equals_xsimd<xsimd::avx2>(data, start);
+}
+
+/// Count SOH occurrences using AVX2 (for message boundary detection)
+[[nodiscard]] NFX_HOT
+inline size_t count_soh_avx2(std::span<const char> data) noexcept {
+    return detail::count_soh_xsimd<xsimd::avx2>(data);
+}
+
+#if NFX_AVX512_AVAILABLE
+
+/// AVX-512 accelerated SOH scanner (processes 64 bytes at a time)
+[[nodiscard]] NFX_HOT
+inline SohPositions scan_soh_avx512(std::span<const char> data) noexcept {
+    return detail::scan_soh_xsimd<xsimd::avx512bw>(data);
+}
+
+/// AVX-512 accelerated find next SOH
+[[nodiscard]] NFX_HOT
+inline size_t find_soh_avx512(
+    std::span<const char> data,
+    size_t start = 0) noexcept
+{
+    return detail::find_soh_xsimd<xsimd::avx512bw>(data, start);
+}
+
+/// AVX-512 accelerated find '='
+[[nodiscard]] NFX_HOT
+inline size_t find_equals_avx512(
+    std::span<const char> data,
+    size_t start = 0) noexcept
+{
+    return detail::find_equals_xsimd<xsimd::avx512bw>(data, start);
+}
+
+/// Count SOH occurrences using AVX-512
+[[nodiscard]] NFX_HOT
+inline size_t count_soh_avx512(std::span<const char> data) noexcept {
+    return detail::count_soh_xsimd<xsimd::avx512bw>(data);
+}
+
+#endif  // NFX_AVX512_AVAILABLE
+
+#else  // !NFX_HAS_XSIMD - Raw intrinsics fallback
+
+// ============================================================================
+// AVX2 SIMD Scanner (raw intrinsics)
+// ============================================================================
 
 /// AVX2-accelerated SOH scanner (processes 32 bytes at a time)
 [[nodiscard]] NFX_HOT
@@ -277,10 +515,8 @@ inline size_t count_soh_avx2(std::span<const char> data) noexcept {
     return count;
 }
 
-#endif  // NFX_SIMD_AVAILABLE
-
 // ============================================================================
-// AVX-512 SIMD Scanner (2x throughput vs AVX2)
+// AVX-512 SIMD Scanner (raw intrinsics, 2x throughput vs AVX2)
 // ============================================================================
 
 #if NFX_AVX512_AVAILABLE
@@ -431,6 +667,10 @@ inline size_t count_soh_avx512(std::span<const char> data) noexcept {
 }
 
 #endif  // NFX_AVX512_AVAILABLE
+
+#endif  // NFX_HAS_XSIMD
+
+#endif  // NFX_SIMD_AVAILABLE
 
 // ============================================================================
 // Unified API (auto-selects SIMD or scalar)
