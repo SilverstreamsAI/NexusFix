@@ -22,7 +22,17 @@
 #include "nexusfix/platform/platform.hpp"
 
 // SIMD headers
-#if defined(__AVX512F__) && defined(__AVX512BW__)
+#if defined(NFX_HAS_XSIMD) && NFX_HAS_XSIMD
+    #include <xsimd/xsimd.hpp>
+    // Define feature macros for conditional compilation
+    #if defined(__AVX512F__) && defined(__AVX512BW__)
+        #define NFX_AVX512_CHECKSUM 1
+    #elif defined(__AVX2__)
+        #define NFX_AVX2_CHECKSUM 1
+    #elif defined(__SSE2__)
+        #define NFX_SSE2_CHECKSUM 1
+    #endif
+#elif defined(__AVX512F__) && defined(__AVX512BW__)
     #include <immintrin.h>
     #define NFX_AVX512_CHECKSUM 1
 #elif defined(__AVX2__)
@@ -50,7 +60,75 @@ inline uint8_t checksum_scalar(const char* data, size_t len) noexcept {
 }
 
 // ============================================================================
-// SSE2 Checksum (128-bit)
+// SIMD Checksum Implementations
+// ============================================================================
+
+#if defined(NFX_HAS_XSIMD) && NFX_HAS_XSIMD
+
+// ============================================================================
+// xsimd Portable SIMD Checksum (TICKET_212)
+// ============================================================================
+
+namespace detail {
+
+/// Arch-templated checksum using uint8_t lane accumulation
+/// FIX checksum = sum(bytes) mod 256. uint8_t wrapping in lanes and
+/// reduce_add preserves the mod-256 result by modular arithmetic.
+template <typename Arch>
+[[nodiscard]] NFX_HOT
+inline uint8_t checksum_xsimd(const char* data, size_t len) noexcept {
+    using batch_t = xsimd::batch<uint8_t, Arch>;
+    constexpr size_t width = batch_t::size;
+    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(data);
+
+    batch_t acc(uint8_t(0));
+    size_t i = 0;
+    for (; i + width <= len; i += width) {
+        acc = acc + xsimd::load_unaligned<Arch>(ptr + i);
+    }
+    uint8_t sum = xsimd::reduce_add(acc);
+    for (; i < len; ++i) sum += ptr[i];
+    return sum;
+}
+
+}  // namespace detail
+
+// Named wrappers for backward compatibility
+
+#if defined(NFX_SSE2_CHECKSUM) || defined(NFX_AVX2_CHECKSUM) || defined(NFX_AVX512_CHECKSUM)
+
+/// SSE2 checksum - processes 16 bytes at a time
+[[nodiscard]] NFX_HOT
+inline uint8_t checksum_sse2(const char* data, size_t len) noexcept {
+    return detail::checksum_xsimd<xsimd::sse2>(data, len);
+}
+
+#endif
+
+#if defined(NFX_AVX2_CHECKSUM) || defined(NFX_AVX512_CHECKSUM)
+
+/// AVX2 checksum - processes 32 bytes at a time
+[[nodiscard]] NFX_HOT
+inline uint8_t checksum_avx2(const char* data, size_t len) noexcept {
+    return detail::checksum_xsimd<xsimd::avx2>(data, len);
+}
+
+#endif
+
+#if defined(NFX_AVX512_CHECKSUM)
+
+/// AVX-512 checksum - processes 64 bytes at a time
+[[nodiscard]] NFX_HOT
+inline uint8_t checksum_avx512(const char* data, size_t len) noexcept {
+    return detail::checksum_xsimd<xsimd::avx512bw>(data, len);
+}
+
+#endif
+
+#else  // !NFX_HAS_XSIMD - Raw intrinsics fallback
+
+// ============================================================================
+// SSE2 Checksum (128-bit, raw intrinsics)
 // ============================================================================
 
 #if defined(NFX_SSE2_CHECKSUM) || defined(NFX_AVX2_CHECKSUM) || defined(NFX_AVX512_CHECKSUM)
@@ -90,7 +168,7 @@ inline uint8_t checksum_sse2(const char* data, size_t len) noexcept {
 #endif
 
 // ============================================================================
-// AVX2 Checksum (256-bit)
+// AVX2 Checksum (256-bit, raw intrinsics)
 // ============================================================================
 
 #if defined(NFX_AVX2_CHECKSUM) || defined(NFX_AVX512_CHECKSUM)
@@ -135,7 +213,7 @@ inline uint8_t checksum_avx2(const char* data, size_t len) noexcept {
 #endif
 
 // ============================================================================
-// AVX-512 Checksum (512-bit)
+// AVX-512 Checksum (512-bit, raw intrinsics)
 // ============================================================================
 
 #if defined(NFX_AVX512_CHECKSUM)
@@ -171,6 +249,8 @@ inline uint8_t checksum_avx512(const char* data, size_t len) noexcept {
 }
 
 #endif
+
+#endif  // NFX_HAS_XSIMD
 
 // ============================================================================
 // Auto-Dispatch Checksum

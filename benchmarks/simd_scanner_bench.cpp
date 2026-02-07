@@ -16,6 +16,9 @@
 
 // Define NFX_HAS_SIMD before including
 #define NFX_HAS_SIMD 1
+#ifndef NFX_HAS_XSIMD
+#define NFX_HAS_XSIMD 1
+#endif
 #include "../include/nexusfix/interfaces/i_message.hpp"
 #include "../include/nexusfix/memory/buffer_pool.hpp"
 #include "../include/nexusfix/parser/simd_scanner.hpp"

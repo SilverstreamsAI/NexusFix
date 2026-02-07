@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Options
 option(NFX_ENABLE_SIMD "Enable SIMD optimizations (AVX2)" ON)
 option(NFX_ENABLE_AVX512 "Enable AVX-512 optimizations (requires CPU support)" OFF)
+option(NFX_ENABLE_XSIMD "Enable xsimd portable SIMD abstraction (ARM NEON + x86)" ON)
 option(NFX_ENABLE_IO_URING "Enable io_uring transport (Linux only)" OFF)
 option(NFX_ENABLE_LOGGING "Enable Quill high-performance logging" ON)
 option(NFX_ENABLE_ABSEIL "Enable Abseil for Swiss Table hash maps (~3x faster)" ON)
@@ -43,6 +44,18 @@ if(NFX_ENABLE_ABSEIL)
     set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
     set(ABSL_BUILD_TESTING OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(abseil-cpp)
+endif()
+
+# xsimd - Portable SIMD abstraction (x86 AVX2/AVX-512 + ARM NEON from single codebase)
+if(NFX_ENABLE_XSIMD)
+    FetchContent_Declare(
+        xsimd
+        GIT_REPOSITORY https://github.com/xtensor-stack/xsimd.git
+        GIT_TAG 13.2.0
+        GIT_SHALLOW TRUE
+    )
+    set(XSIMD_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(xsimd)
 endif()
 
 # mimalloc - Microsoft's high-performance allocator (per-session heaps, O(1) cleanup)
@@ -171,6 +184,13 @@ if(NFX_ENABLE_SIMD)
             target_compile_options(nexusfix INTERFACE -mavx512f -mavx512bw)
         endif()
         message(STATUS "AVX-512 optimizations enabled")
+    endif()
+
+    # xsimd portable SIMD abstraction
+    if(NFX_ENABLE_XSIMD)
+        target_link_libraries(nexusfix INTERFACE xsimd)
+        target_compile_definitions(nexusfix INTERFACE NFX_HAS_XSIMD=1)
+        message(STATUS "xsimd portable SIMD enabled (x86 + ARM NEON)")
     endif()
 endif()
 
