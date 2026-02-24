@@ -22,7 +22,8 @@
   <a href="#architecture-influences">Architecture</a> |
   <a href="#features">Features</a> |
   <a href="#quick-start">Quick Start</a> |
-  <a href="#documentation">Docs</a>
+  <a href="#documentation">Docs</a> |
+  <a href="#contact">Contact</a>
 </p>
 
 ---
@@ -76,6 +77,7 @@ Processing a **NewOrderSingle** message on the hot path:
 
 *Verified via custom allocator instrumentation. See [Optimization Diary](docs/optimization_diary.md).*
 
+*For kernel bypass (DPDK/AF_XDP) and FPGA acceleration, see [Roadmap](docs/design/TICKET_204_AERON_HIGH_THROUGHPUT_MESSAGING.md).*
 
 ---
 
@@ -391,7 +393,7 @@ NexusFIX is designed for:
 
 ## Contact
 
-For advanced integration (kernel bypass, FPGA) or collaboration inquiries: contact@silverstream.tech
+For questions, collaboration, or consulting inquiries: contact@silverstream.tech
 
 ---
 
