@@ -1,7 +1,6 @@
 # AVX-512 SIMD Scanner Benchmark
 
 **Date**: 2026-01-23
-**Ticket**: TICKET_INTERNAL_010 (Highway Analysis)
 **Optimization**: AVX-512 SOH Scanner Implementation
 
 ---

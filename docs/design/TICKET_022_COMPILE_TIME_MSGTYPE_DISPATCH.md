@@ -138,5 +138,4 @@ Compile-time query:
 
 ## References
 
-- TICKET_INTERNAL_020: Compile-time Sort Evaluation
 - docs/modernc_quant.md: Technique #29 (std::variant de-virtualization)

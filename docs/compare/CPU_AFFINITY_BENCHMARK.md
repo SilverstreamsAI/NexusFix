@@ -1,7 +1,6 @@
 # CPU Core Pinning Benchmark
 
 **Date**: 2026-01-23
-**Ticket**: TICKET_INTERNAL_008 (CPU Affinity)
 **Optimization**: Session-per-core affinity with CPU core pinning
 
 ---

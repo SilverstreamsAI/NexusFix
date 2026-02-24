@@ -1,7 +1,7 @@
 # NexusFIX Optimization Summary: Before vs After
 
 **Date**: 2026-01-23
-**Scope**: Three rounds of optimization work from TICKET_INTERNAL_008
+**Scope**: Three rounds of optimization work
 
 ---
 
@@ -235,4 +235,3 @@ All optimizations maintain backward compatibility with graceful fallbacks.
 - [ABSEIL_FLAT_HASH_MAP_BENCHMARK.md](ABSEIL_FLAT_HASH_MAP_BENCHMARK.md)
 - [CPU_AFFINITY_BENCHMARK.md](CPU_AFFINITY_BENCHMARK.md)
 - [DEFERRED_PROCESSOR_BENCHMARK.md](DEFERRED_PROCESSOR_BENCHMARK.md)
-- [TICKET_INTERNAL_008](../../NexusFixRecord/docs/TICKET_INTERNAL_008_HIGH_PERF_CPP_LIBRARIES_RESEARCH.md)

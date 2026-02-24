@@ -535,8 +535,8 @@ std::println("Price: {}, Qty: {}", price, qty);
 | Phase 1 | [TICKET_024_PHASE1_BENCHMARK.md](/docs/compare/TICKET_024_PHASE1_BENCHMARK.md) | P99 -8% to -30%, StdDev -27% to -80% |
 | Phase 2 | [TICKET_024_PHASE2_BENCHMARK.md](/docs/compare/TICKET_024_PHASE2_BENCHMARK.md) | Zero overhead (+0.7% to +1.6% within noise) |
 | Phase 3 | [TICKET_024_PHASE3_BENCHMARK.md](/docs/compare/TICKET_024_PHASE3_BENCHMARK.md) | Zero hot-path impact (I/O utilities only) |
-| Phase 5 | [TICKET_024_PHASE5_BENCHMARK.md](/docs/compare/TICKET_024_PHASE5_BENCHMARK.md) | 新增可选工具，现有代码零影响；enumerate() 零开销，chunk() -4%，contains() -35% |
-| Phase 5+6+7 | [TICKET_024_PHASE567_BENCHMARK.md](/docs/compare/TICKET_024_PHASE567_BENCHMARK.md) | 综合测试：零性能影响，Parse -1.5%~-3.5% (噪声范围) |
+| Phase 5 | [TICKET_024_PHASE5_BENCHMARK.md](/docs/compare/TICKET_024_PHASE5_BENCHMARK.md) | New optional utilities, zero impact on existing code; enumerate() zero overhead, chunk() -4%, contains() -35% |
+| Phase 5+6+7 | [TICKET_024_PHASE567_BENCHMARK.md](/docs/compare/TICKET_024_PHASE567_BENCHMARK.md) | Combined test: zero performance impact, Parse -1.5%~-3.5% (within noise) |
 
 ---
 

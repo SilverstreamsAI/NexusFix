@@ -1,7 +1,6 @@
 # Deferred Processor Benchmark
 
 **Date**: 2026-01-23
-**Ticket**: TICKET_INTERNAL_008 (NanoLog Pattern)
 **Optimization**: Deferred processing pattern - move expensive work off hot path
 
 ---
@@ -205,4 +204,3 @@ The NanoLog-inspired deferred processing pattern provides significant hot path r
 ## References
 
 - [NanoLog Paper](https://www.usenix.org/system/files/conference/atc18/atc18-yang.pdf) - 7ns logging with deferred formatting
-- [TICKET_INTERNAL_018](TICKET_INTERNAL_018_NANOLOG_ANALYSIS.md) - NanoLog analysis for NexusFIX

@@ -1,7 +1,6 @@
 # DEFER_TASKRUN Benchmark: Before vs After
 
 **Date**: 2026-01-23
-**Ticket**: TICKET_INTERNAL_015
 **Optimization**: io_uring DEFER_TASKRUN flags
 
 ---

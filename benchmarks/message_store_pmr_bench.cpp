@@ -270,7 +270,6 @@ int main() {
     std::cout << "==========================================================\n\n";
 
     std::cout << "  File: include/nexusfix/store/memory_message_store.hpp\n";
-    std::cout << "  Ticket: TICKET_INTERNAL_008\n";
     std::cout << "  Technique: modernc_quant.md #16 (PMR Memory Pool)\n";
 
     std::cout << "\n==========================================================\n";

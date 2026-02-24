@@ -1,7 +1,6 @@
 # Abseil flat_hash_map Benchmark
 
 **Date**: 2026-01-23
-**Ticket**: TICKET_INTERNAL_011 (Abseil Analysis)
 **Optimization**: Replace std::unordered_map with absl::flat_hash_map
 
 ---

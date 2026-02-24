@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-26
 **Optimization:** PMR (Polymorphic Memory Resources) for MemoryMessageStore
-**Reference:** TICKET_INTERNAL_008, modernc_quant.md #16
+**Reference:** modernc_quant.md #16
 
 ---
 
