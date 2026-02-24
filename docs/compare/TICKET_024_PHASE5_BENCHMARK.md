@@ -14,14 +14,14 @@ Benchmark comparing C++23 ranges utilities vs manual implementations to determin
 
 | This IS | This is NOT |
 |---------|-------------|
-| `ranges` vs `manual` 对比 | Phase 5 前后性能变化 |
-| 新工具函数的开销 | 现有代码的性能回归 |
+| `ranges` vs `manual` comparison | Phase 5 before/after performance change |
+| Overhead of new utility functions | Performance regression of existing code |
 
-**Phase 5 对现有代码性能影响：零**
+**Phase 5 impact on existing code: zero**
 
-- 新增的 `contains()`, `chunk()`, `slide()`, `stride()` 是**可选工具**
-- 现有热路径代码**未调用**这些函数
-- 只有主动选择使用时才有性能差异
+- The new `contains()`, `chunk()`, `slide()`, `stride()` are **optional utilities**
+- Existing hot path code **does not call** these functions
+- Performance difference only exists when actively choosing to use them
 
 **Methodology**: Uses `nfx::bench` utilities (see [TICKET_027](../design/TICKET_027_BENCHMARK_UTILS_ENHANCEMENT.md))
 - `estimate_cpu_freq_ghz_busy()` - Busy-wait CPU calibration
@@ -120,27 +120,27 @@ views::chunk:      NATIVE (C++23)
 
 ## Conclusion
 
-### 对现有代码的影响
+### Impact on Existing Code
 
-**零影响** - Phase 5 只是新增可选工具函数，不修改任何现有代码路径。
+**Zero impact** - Phase 5 only adds optional utility functions, does not modify any existing code paths.
 
-### 新工具的使用建议
+### Usage Recommendations for New Utilities
 
-| 工具 | 开销 | 建议 |
-|------|------|------|
-| `enumerate()` | 0% | ✅ 任何地方可用 |
-| `chunk()` | -4% | ✅ 非热路径可用 |
-| `slide()` | ~同 chunk | ✅ 非热路径可用 |
-| `stride()` | ~同 chunk | ✅ 非热路径可用 |
-| `contains()` | -35% | ⚠️ 仅配置/日志场景 |
+| Utility | Overhead | Recommendation |
+|---------|----------|----------------|
+| `enumerate()` | 0% | Safe to use anywhere |
+| `chunk()` | -4% | Safe for non-hot paths |
+| `slide()` | ~same as chunk | Safe for non-hot paths |
+| `stride()` | ~same as chunk | Safe for non-hot paths |
+| `contains()` | -35% | Config/logging scenarios only |
 
-### 何时使用
+### When to Use
 
 ```cpp
-// ✅ 热路径：保持手动循环
+// Hot path: keep manual loops
 for (size_t i = 0; i < data.size(); ++i) { ... }
 
-// ✅ 非热路径：用 ranges 提高可读性
+// Non-hot path: use ranges for readability
 for (auto [i, val] : nfx::util::enumerate(config)) { ... }
 ```
 

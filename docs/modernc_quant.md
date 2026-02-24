@@ -1,7 +1,6 @@
 # Modern C++ for Quantitative Trading
 
 > Reference guide for high-performance C++ techniques in quantitative trading systems.
-> Applicable to QuantNexus Executor (C++23 + pybind11 embedded Python).
 
 ---
 
@@ -94,12 +93,12 @@
 ### 17. Columnar DataFrame Storage
 
 - **Feature**: Store OHLCV in separate vectors rather than struct arrays.
-- **Quant Value**: Cache-friendly layout for vectorized operations and efficient NumPy conversion. *(Used in QuantNexus Executor)*
+- **Quant Value**: Cache-friendly layout for vectorized operations and efficient NumPy conversion.
 
 ### 18. Vector Reserve + Push Pattern
 
 - **Feature**: Pre-allocate vector capacity before bulk insertion.
-- **Quant Value**: Eliminates reallocations and iterator invalidation during data loading. *(Used in QuantNexus Executor)*
+- **Quant Value**: Eliminates reallocations and iterator invalidation during data loading.
 
 ---
 
@@ -153,7 +152,7 @@
 ### 28. `std::chrono::steady_clock` Precision Timing
 
 - **Feature**: Use steady clock for execution time measurement.
-- **Quant Value**: Monotonic, high-resolution timing immune to system clock adjustments. *(Used in QuantNexus Executor)*
+- **Quant Value**: Monotonic, high-resolution timing immune to system clock adjustments.
 
 ---
 
@@ -197,12 +196,12 @@
 ### 36. Non-copyable / Non-movable Resource Owners
 
 - **Feature**: Delete copy/move constructors for state-owning classes.
-- **Quant Value**: Prevents accidental duplication of interpreter or connection state. *(Used in QuantNexus ExecutorCore)*
+- **Quant Value**: Prevents accidental duplication of interpreter or connection state.
 
 ### 37. `std::optional<T>` Nullable Fields
 
 - **Feature**: Explicit optional semantics for configuration fields.
-- **Quant Value**: Type-safe nullability without sentinel values or pointers. *(Used in QuantNexus config_types.hpp)*
+- **Quant Value**: Type-safe nullability without sentinel values or pointers.
 
 ---
 
@@ -216,7 +215,7 @@
 ### 39. `std::format` Safe Formatting
 
 - **Feature**: Use `std::format` for non-hot-path logging.
-- **Quant Value**: Type-safe formatting without printf vulnerabilities. *(Used in QuantNexus Executor)*
+- **Quant Value**: Type-safe formatting without printf vulnerabilities.
 
 ### 40. `std::span<const std::byte>` Zero-copy Views
 
@@ -246,7 +245,7 @@
 ### 45. `std::filesystem` Cross-platform I/O
 
 - **Feature**: Portable filesystem operations.
-- **Quant Value**: Single codebase for Windows/Linux/macOS file handling. *(Used in QuantNexus Executor)*
+- **Quant Value**: Single codebase for Windows/Linux/macOS file handling.
 
 ---
 
@@ -255,27 +254,27 @@
 ### 46. Zero-copy NumPy Array Binding
 
 - **Feature**: Create `py::array_t<T>` directly from C++ vector pointers.
-- **Quant Value**: Market data passed to Python without any memory copy. *(Core pattern in QuantNexus Executor)*
+- **Quant Value**: Market data passed to Python without any memory copy.
 
 ### 47. Embedded Interpreter Lifecycle (RAII)
 
 - **Feature**: Initialize/finalize Python interpreter in constructor/destructor.
-- **Quant Value**: Deterministic resource management prevents interpreter leaks. *(Used in QuantNexus ExecutorCore)*
+- **Quant Value**: Deterministic resource management prevents interpreter leaks.
 
 ### 48. Mutex-protected Global State
 
 - **Feature**: Use `std::mutex` + `std::lock_guard` for shared Python state.
-- **Quant Value**: Thread-safe access to global DataFrame/config during concurrent operations. *(Used in QuantNexus bindings.cpp)*
+- **Quant Value**: Thread-safe access to global DataFrame/config during concurrent operations.
 
 ### 49. `std::function` Progress Callbacks
 
 - **Feature**: Type-erased callbacks for progress/increment reporting.
-- **Quant Value**: Decouples executor from UI layer while enabling real-time updates. *(Used in QuantNexus Executor)*
+- **Quant Value**: Decouples executor from UI layer while enabling real-time updates.
 
 ### 50. Factory Pattern for Data Sources
 
 - **Feature**: `createDataSource()` dispatches to Parquet/Mock implementations.
-- **Quant Value**: Pluggable data loaders without modifying core execution logic. *(Used in QuantNexus Executor)*
+- **Quant Value**: Pluggable data loaders without modifying core execution logic.
 
 ---
 
@@ -284,27 +283,27 @@
 ### 51. Apache Arrow Columnar Access
 
 - **Feature**: Lazy column extraction from Parquet via Arrow.
-- **Quant Value**: Read only required columns; zero-copy to NumPy arrays. *(Used in QuantNexus ParquetDataSource)*
+- **Quant Value**: Read only required columns; zero-copy to NumPy arrays.
 
 ### 52. nlohmann/json Compile-time Parsing
 
 - **Feature**: JSON serialization with type-safe macros.
-- **Quant Value**: Automatic struct-to-JSON mapping without runtime reflection. *(Used in QuantNexus config/result types)*
+- **Quant Value**: Automatic struct-to-JSON mapping without runtime reflection.
 
 ### 53. Move Semantics for DataFrame Transfer
 
 - **Feature**: Use `std::move()` for DataFrame ownership transfer.
-- **Quant Value**: Zero-copy handoff between data source and executor core. *(Used in QuantNexus Executor)*
+- **Quant Value**: Zero-copy handoff between data source and executor core.
 
 ### 54. Static Linking for Portability
 
 - **Feature**: Link libgcc/libstdc++ statically.
-- **Quant Value**: Single binary runs across Linux distributions without dependency issues. *(Used in QuantNexus CMake)*
+- **Quant Value**: Single binary runs across Linux distributions without dependency issues.
 
 ### 55. Time-range Filtering Post-load
 
 - **Feature**: Filter data after loading based on execution config.
-- **Quant Value**: Avoids re-reading Parquet files for different backtest periods. *(Used in QuantNexus ParquetDataSource)*
+- **Quant Value**: Avoids re-reading Parquet files for different backtest periods.
 
 ---
 
@@ -566,7 +565,6 @@
 - [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/)
 - [pybind11 Documentation](https://pybind11.readthedocs.io/)
 - [Apache Arrow C++ API](https://arrow.apache.org/docs/cpp/)
-- [TICKET_133: V3 Architecture](../design/TICKET_133_V3_ARCHITECTURE_REFACTORING.md)
 - [Intel Intrinsics Guide](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/)
 - [DPDK Documentation](https://doc.dpdk.org/)
 - [io_uring Documentation](https://kernel.dk/io_uring.pdf)

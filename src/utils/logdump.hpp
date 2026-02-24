@@ -1,5 +1,5 @@
 /*
-    Modern C++23 Multi-Channel Logging Module for QuantNexus
+    Modern C++23 Multi-Channel Logging Module for NexusFIX
     Adapted from license-server logdump.hpp
 
     Features:
@@ -78,7 +78,7 @@ enum class Level : uint8_t {
 }
 
 // ============================================================================
-// Log Channels (adapted for QuantNexus)
+// Log Channels
 // ============================================================================
 
 enum class Channel : uint8_t {

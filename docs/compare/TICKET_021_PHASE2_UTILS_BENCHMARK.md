@@ -226,7 +226,7 @@ slower = Traditional approach is faster (may reconsider use)
 ## Reproduce
 
 ```bash
-cd /data/ws/NexusFix/build
+cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make phase2_utils_bench -j$(nproc)
 ./bin/benchmarks/phase2_utils_bench

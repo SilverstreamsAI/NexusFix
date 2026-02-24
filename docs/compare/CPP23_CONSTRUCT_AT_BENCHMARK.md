@@ -185,7 +185,7 @@ This is excellent performance, confirming `std::construct_at` has no overhead.
 
 ```bash
 # Compile and run
-cd /data/ws/NexusFix/build
+cd build
 cmake .. && make -j$(nproc)
 ./bin/benchmarks/parse_benchmark 100000
 
