@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusFix Interactive Q&A - C++Online 2026</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:,">
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <div class="header-title">
+                NexusFix Interactive Q&A <span>C++Online 2026</span>
+                <button id="settings-toggle" class="settings-toggle" title="API Settings">&#9881;</button>
+            </div>
+            <div id="settings-panel" class="settings-panel">
+                <div class="settings-content">
+                    <div class="settings-label">Claude API Key (optional)</div>
+                    <div class="settings-row">
+                        <input type="password" id="api-key-input" class="api-key-input"
+                               placeholder="sk-ant-..." autocomplete="off">
+                        <button id="api-key-save" class="settings-btn">Save</button>
+                        <button id="api-key-clear" class="settings-btn settings-btn-clear">Clear</button>
+                    </div>
+                    <div id="api-key-status" class="api-key-status">No API key configured (optional)</div>
+                    <div class="settings-note">Enables AI answers for questions not in the 182 Q&A database. Key stored in browser only.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="category-bar" id="category-bar"></div>
+
+        <div class="results-area" id="results-area"></div>
+
+        <div class="search-bar">
+            <input type="text" id="search-input" class="search-input"
+                   placeholder="Type keyword or question..." autocomplete="off">
+            <button id="search-btn" class="search-btn">Ask</button>
+        </div>
+
+        <div class="footer">
+            <a href="https://github.com/SilverstreamsAI/NexusFix" target="_blank" rel="noopener">github.com/SilverstreamsAI/NexusFix</a> &middot; v1.0
+        </div>
+    </div>
+
+    <script src="qa-data.js"></script>
+    <script src="llm.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

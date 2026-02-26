@@ -82,5 +82,8 @@ GEMINI.md
 # Private records repository (local copy)
 NexusFixRecord/
 
+# Chatbot TTS audio files (~150MB, generated locally)
+docs/chatbot/audio/
+
 # Local scripts
 scripts/
