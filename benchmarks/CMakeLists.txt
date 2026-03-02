@@ -243,5 +243,13 @@ if(NFX_ENABLE_MIMALLOC)
     )
 endif()
 
+# SIMD scanner benchmark (scalar vs AVX2 vs AVX-512)
+add_executable(simd_scanner_bench simd_scanner_bench.cpp)
+target_link_libraries(simd_scanner_bench PRIVATE nexusfix pthread)
+target_compile_options(simd_scanner_bench PRIVATE -O3 -march=native)
+set_target_properties(simd_scanner_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/benchmarks
+)
+
 # QuickFIX comparison benchmark (optional)
 add_subdirectory(vs_quickfix)

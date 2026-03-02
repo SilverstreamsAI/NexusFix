@@ -1,0 +1,29 @@
+#!/bin/bash
+# pre-push hook: Run regression tests before pushing
+# Install with: ./scripts/install_hooks.sh
+
+set -e
+
+PROJECT_DIR="$(cd "$(dirname "$(git rev-parse --git-dir)")" && pwd)"
+BIN_DIR="${PROJECT_DIR}/build/bin"
+TEST_BIN="${BIN_DIR}/tests/nexusfix_tests"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo -e "${YELLOW}[pre-push]${NC} Running regression tests..."
+
+if [ ! -x "${TEST_BIN}" ]; then
+    echo -e "${RED}[pre-push]${NC} Test binary not found: ${TEST_BIN}"
+    echo -e "${RED}[pre-push]${NC} Build tests first: cmake --build build --target nexusfix_tests -j\$(nproc)"
+    exit 1
+fi
+
+if "${TEST_BIN}" "[regression]" --colour-mode ansi; then
+    echo -e "${GREEN}[pre-push]${NC} Regression tests passed"
+else
+    echo -e "${RED}[pre-push]${NC} Regression tests FAILED - push aborted"
+    exit 1
+fi
