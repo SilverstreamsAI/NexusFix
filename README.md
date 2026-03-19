@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/SilverstreamsAI/NexusFix/actions/workflows/ci.yml"><img src="https://github.com/SilverstreamsAI/NexusFix/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/C%2B%2B-23-blue.svg" alt="C++23">
   <img src="https://img.shields.io/badge/Library-Header--Only-blue.svg" alt="Header-Only">
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License">
@@ -393,7 +394,7 @@ NexusFIX is designed for:
 
 ## Contact
 
-For questions or collaboration: nonagonal.portal@gmail.com
+For questions or collaboration: contact@silverstream.tech
 
 ---
 
@@ -410,7 +411,7 @@ For technical deep-dives on our optimization journey, see [Optimization Diary](d
 This project is maintained by **SilverstreamsAI**.
 
 - **Issues & Discussions**: Welcome for bug reports, performance questions, and feature discussions
-- **Pull Requests**: Welcome
+- **Pull Requests**: Bug fixes only (see [CONTRIBUTING.md](CONTRIBUTING.md))
 
 All contributions must follow:
 - C++23 standards
